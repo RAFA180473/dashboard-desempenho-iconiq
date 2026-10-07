@@ -1,0 +1,6 @@
+# Dados operacionais e de clientes nunca entram no repositório
+*.xlsx
+*.csv
+entrada/
+saida/
+__pycache__/
