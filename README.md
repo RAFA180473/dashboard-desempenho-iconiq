@@ -2,10 +2,11 @@
 
 ## Onde está
 - Dashboard: https://claude.ai/artifact/LJ5pdWNvD92zUT7nKaH8G9 (privado; partilhar pelo menu Partilhar)
+- Site público (GitHub Pages): https://rafa180473.github.io/dashboard-desempenho-iconiq/site/ (dados em site/data/meses.json)
 - Repositório: SharePoint › OPERAÇÕES › Dashboard Desempenho ICONIQ (01 Documentação, 02 Scripts de recolha, 03 Dados e backups)
 - Cópia de trabalho: projeto Claude "Desempenho equipas ICONIQ 2026", pasta automatizacao
 
-## Estado (07/10/2026)
+## Estado (14/10/2026)
 - Dados WheelSys recolhidos de jan/2025 a 30/09/2026; meses até setembro fechados.
 - Customer Verdict carregado de jan/2025 a 06/10/2026.
 - Excel atualizado: Painel_ICONIQ_backup_ate_30set2026.xlsx (Base_Rentals + 4 406 contratos de ago–set, coluna P = Via Verde; Incremental Sales por chave em Vendas_Colaborador!Y:Z com fórmula em Q).
@@ -22,7 +23,7 @@
 | Detailed Rentals Report | detailedrentalreport | Date selection Check-ins (2), Closed contracts (1) | Turnover (chargenet), Net Rental (chargesubdisc), Rental Days (duration), fechados, danos (chargedamage), Diretos |
 | Detailed Rentals Report | detailedrentalreport | Date selection Check-outs (1), All contracts (3) | Contratos abertos e dias dos contratos abertos |
 | Extra Sales Report | extrasalesrpt | List type Check-outs (1), Sales User "Sold by" (1) | Vendas de extras ao balcão, por produto |
-| Incremental Sales Report | incrementalsalesrpt | Date | Incremental Sales (campo total) por estação e colaborador |
+| Extra Sales Report | extrasalesrpt | List type Check-outs (1), Sales User "Checked-out by" (0) | Incremental Sales: Net Revenue dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW, só colaboradores de balcão (lista INC_USERS no coletor) |
 | Fleet Utilization Report | fleetutilizationreport | Date basis (mês), Utilization per day | Frota média (avdays ÷ dias do mês), dias em aluguer (rentdays) e ocupação, por estação (campo station) |
 
 Mapeamento confirmado com o Base_Rentals: Check-out Date=datefrom, Check-in Date=dateto, Days=duration, Net Rental=chargesubdisc, Damages=chargedamage, Net=chargenet, Check-out User=user_from_name, Check-in User=user_to_name, Booking User=user_res_name, Corporate=corporate_name, Rate code=ratecode, Agr. No=radocno.
@@ -31,7 +32,7 @@ Mapeamento confirmado com o Base_Rentals: Check-out Date=datefrom, Check-in Date
 - Receita, Net Rental e Rental Days: mês da Check-in Date, Check-out station, Check-out User.
 - Abertos: Check-out Date (todos os contratos, incluindo os ainda ativos). Fechados e danos: Check-in Date e Check-in station.
 - Diretos: Net Rental, Rate code DIRETOS, Corporate vazio, Booking User.
-- Incremental Sales: usar o Incremental Sales Report do WheelSys tal como sai (substitui o input manual do Excel).
+- Incremental Sales (alterado a 14/10/2026): Extra Sales Report com List type Check-outs, mês da Check-out Date, Sales User "Checked-out by", extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW e os colaboradores de balcão selecionados pelo Nuno. Valor = Net Revenue, somado por estação de check-out e colaborador (estornos e zeros entram como estão). Colaboradores novos com vendas aparecem em ctrl.inc_fora e têm de ser acrescentados à lista INC_USERS do coletor. Substituiu o Incremental Sales Report do WheelSys em todo o histórico (jan/2025–set/2026).
 - Extras: venda = valor líquido > 0 por contrato e produto, vendido por colaborador (não "Account System"). Estornos abatem. Fora: VV (obrigatório), TOLLS e TOLL6 (portagens). FCI conta como pacote.
 - Penetração = contratos com venda ÷ contratos abertos. Extras €/dia = receita de extras ÷ dias dos contratos abertos.
 - Google Score substituído pelo Customer Verdict: NPS (promotores 9–10 menos detratores 0–6) e Experiência (média das 5 notas ×10), por mês do inquérito e estação de check-out; por colaborador via RA Number → Check-out User.
@@ -53,5 +54,6 @@ Mapeamento confirmado com o Base_Rentals: Check-out Date=datefrom, Check-in Date
 4. Abrir o dashboard, expandir "Atualizar dados do WheelSys", clicar na caixa e colar (Ctrl+V). Confirmar a mensagem "Gravado: N meses".
 
 ## Validação (junho/2026, Portugal, contra o Excel)
-Turnover 484 943,12 € · Net Rental 312 707,35 € · Rental Days 15 552 · Abertos 1 915 · Fechados 1 897 · Danos 26 041,40 € · Incremental Sales 45 133,44 € · iRPD 2,90 €. Tudo coincide.
+Turnover 484 943,12 € · Net Rental 312 707,35 € · Rental Days 15 552 · Abertos 1 915 · Fechados 1 897 · Danos 26 041,40 € · Incremental Sales 45 133,44 € · iRPD 2,90 €. Tudo coincide (com a regra antiga do Incremental Sales Report).
+Com a regra de 14/10/2026, o Incremental Sales de setembro/2026 (72 866,61 €) coincide ao cêntimo com a exportação do Extra Sales Report do Nuno, por colaborador.
 Diferenças conhecidas do Excel: RNT-23624 está duplicado no Base_Rentals; a ocupação de Portugal no Excel (66,7 %) difere da recalculada (69,2 %), que segue o trabalho ISCTE.
