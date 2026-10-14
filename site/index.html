@@ -248,7 +248,7 @@ footer b{color:var(--ink-2)}
     <div><b>Extras.</b> Venda = extra opcional com valor líquido positivo, vendido ao balcão por um colaborador (Extra Sales Report, “Sold by”, mês da Check-out Date). Estornos abatem; valor zero não é venda. Fora: VV (obrigatório) e portagens (TOLLS, TOLL6). FCI conta como pacote. Penetração = contratos com venda ÷ contratos abertos. Extras €/dia = receita de extras ÷ dias dos contratos abertos.</div>
     <div><b>Customer Verdict.</b> NPS = % promotores (9–10) − % detratores (0–6) na pergunta de recomendação, no mês em que o inquérito foi respondido e na estação de check-out. Experiência = média das cinco notas do aluguer, em escala de 100. Por colaborador, cada resposta liga-se ao contrato (RA Number) e ao colaborador que fez o check-out.</div>
     <div><b>Rácios.</b> RPD = receita ÷ Rental Days; iRPD = Extras Sales ÷ Rental Days. Extras Sales = Net Revenue do Extra Sales Report (List type Check-ins, Sold by) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW no mês da Check-in Date, atribuído à estação de check-out e a quem vendeu. Análise individual só para a equipa registada; vendas de outros utilizadores (Account System, outsourcing, etc.) contam apenas nos totais de estação e Portugal; RPC = receita ÷ frota média. Somam-se numeradores e denominadores antes de dividir. Portugal soma as estações; utilização = dias em aluguer ÷ (frota × dias do mês). Comparação com o mesmo período do ano anterior.</div>
-    <div><b>Google Reviews.</b> Pontuação (1–5) e nº de reviews da ficha Google de cada estação (AutoUnion Lisboa, Porto Airport e Faro Airport). É uma nota acumulada: o painel mostra a última leitura até ao fim do período escolhido; Portugal = média ponderada pelo nº de reviews. Meta 4,5.</div>
+    <div><b>Google Reviews.</b> Pontuação (1–5) e nº de reviews da ficha Google de cada estação (AutoUnion Lisboa, Porto Airport e Faro Airport). É uma nota acumulada: o painel mostra a última leitura até ao fim do período escolhido (no período mais recente, a leitura mais recente); Portugal = média ponderada pelo nº de reviews. Meta 4,5.</div>
   </footer>
 </div>
 
@@ -306,9 +306,9 @@ function soma({ano,meses,est,col}){
       bk+=c[3]*c[4]; bkn+=c[4]; gg+=c[5]*c[6]; ggn+=c[6]; }
     o.bk=bkn?bk/bkn:null; o.bkn=bkn||null;
     // Google Reviews: pontuação acumulada da ficha Google de cada estação → usa a última leitura até ao fim do período
-    { const fim=Math.max(...meses), por=[]; gg=0; ggn=0; let ref=null;
+    { const fim=Math.max(...meses), por=[]; gg=0; ggn=0; let ref=null; const atual=(ano>ultimo[0])||(ano===ultimo[0]&&fim>=ultimo[1]); // período mais recente: usa a leitura mais recente
       for(let s=0;s<D.estacoes.length;s++){ if(est>=0&&s!==est)continue;
-        let best=null; for(const c of D.ocs){ if(c[2]!==s||!(c[6]>0))continue; if(c[0]>ano||(c[0]===ano&&c[1]>fim))continue;
+        let best=null; for(const c of D.ocs){ if(c[2]!==s||!(c[6]>0))continue; if(!atual&&(c[0]>ano||(c[0]===ano&&c[1]>fim)))continue;
           if(!best||c[0]>best[0]||(c[0]===best[0]&&c[1]>best[1])) best=c; }
         if(best){ gg+=best[5]*best[6]; ggn+=best[6]; por.push([D.estacoes[s].nome,best[5],best[6]]);
           const r=best[0]*100+best[1]; if(ref==null||r<ref) ref=r; } }
