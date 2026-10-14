@@ -1,4 +1,4 @@
-/* ICONIQ | Coletor WheelSys  v1.2 (14/10/2026: Extras Sales (ex-Incremental Sales) pelo Extra Sales Report, Checked-out by)
+/* ICONIQ | Coletor WheelSys  v1.3 (14/10/2026: Extras Sales (ex-Incremental Sales) = Extra Sales Report, Check-ins, Sold by)
  * Corre dentro de um separador do WheelSys (iconiqfleet.wheelsys.io/ui/...) com sessão iniciada.
  * Usa os mesmos pedidos que os relatórios do ecrã (só leitura) e agrega por mês × estação × colaborador.
  * Não guarda dados pessoais de clientes (nomes, matrículas, emails): só totais.
@@ -51,17 +51,17 @@
     F('edextras', 'rptedextras', 'ftLookupMulti', false, '', 'Insurances & Options'),
     F('edusers', 'rptedusers', 'ftLookupMulti', false, '', 'Users'),
     F('mtsalesusertype', 'rptmtsalesusertype', 'ftMemTypeSingle', true, '1', 'Sales User')]);
-  // Incremental Sales (definido pelo Nuno a 14/10/2026): Extra Sales Report, List type Check-outs, Sales User "Checked-out by" (0),
-  // só estes extras e estes colaboradores de balcão; valor = Net Revenue (estornos e zeros entram como estão).
+  // Extras Sales (ex-Incremental Sales; definido pelo Nuno a 14/10/2026): Extra Sales Report, List type Check-ins (2),
+  // Sales User "Sold by" (1), todos os utilizadores, só estes extras; valor = Net Revenue no mês da Check-in Date, por estação de check-out.
+  // A separação equipa registada / restantes (análise individual vs. só totais) é feita no dashboard (config/equipa).
   const INC_EXTRAS = new Set(['RAP', 'FCI', 'CBORD', 'WUG', 'UPGR', 'FDW', 'ADD', 'PPW', 'RDW']);
-  const INC_USERS = new Set(["Amaral Lívia", "Andrade Paloma", "Baptista Rafael", "Barros Jason", "Bilyk Julia", "Branco Francisco", "Carrasqueira Bruno", "Correia Bruno", "Costa Guilherme", "Gahiva Bruno", "Lelo Diogo", "Lima Hipólito", "Lopes Daniela", "Lopes João", "Martins Rui", "Mattos Bruna", "Mendes Laura", "Mota Tânia", "Palma Guilherme", "Passos Jorge", "Paz Nicole", "Piccoli Guilherme", "Pires Diana", "Rocha Lucas", "Rodrigues Fernanda", "Silva Johanna", "Silva Tiago", "Truta Goergia", "Varolo Amanda", "Vasconcelos Rui", "Ventura Fernanda", "Ximenes Luan"]);
   const incremental = range => rep('extrasalesrpt', 'Extra Sales Report', [
-    F('mtlisttype', 'rptmtlisttype', 'ftMemTypeSingle', true, '1', 'List type'),
+    F('mtlisttype', 'rptmtlisttype', 'ftMemTypeSingle', true, '2', 'List type'),
     F('dddf#dt', 'rptdddfdt', 'ftDateRange', true, range, 'Date'),
     F('edstations', 'rptedstations', 'ftStation', false, null, 'Stations'),
     F('edextras', 'rptedextras', 'ftLookupMulti', false, '', 'Insurances & Options'),
     F('edusers', 'rptedusers', 'ftLookupMulti', false, '', 'Users'),
-    F('mtsalesusertype', 'rptmtsalesusertype', 'ftMemTypeSingle', true, '0', 'Sales User')]);
+    F('mtsalesusertype', 'rptmtsalesusertype', 'ftMemTypeSingle', true, '1', 'Sales User')]);
   const frota = range => rep('fleetutilizationreport', 'Fleet Utilization Report', [
     F('dddf#dt', 'rptdddfdt', 'ftDateRange', true, range, 'Date basis'),
     F('edstations', 'rptedstations', 'ftStation', false, null, 'Stations'),
@@ -138,13 +138,10 @@
     }
     for (const [key, set] of vendaPor) { const [e, c] = key.split('|'); add(e, c, 'c_venda', set.size); }
     ctrl.linhas_extras = E.length;
-    // 4) Incremental Sales (Extra Sales Report, Checked-out by, extras e colaboradores definidos)
-    const I = await incremental(range); const fora = {};
+    // 4) Extras Sales (Extra Sales Report, Check-ins, Sold by, extras definidos; todos os utilizadores)
+    const I = await incremental(range);
     for (const r of I) { if (!INC_EXTRAS.has(String(r.extra_code || '').toUpperCase())) continue;
-      const u = nome(r.employee_name); const v = +r.revenue || 0;
-      if (!INC_USERS.has(u)) { if (!SIS.test(u) && u !== '(sem colaborador)' && v) fora[u] = r2((fora[u] || 0) + v); continue; }
-      add(est(r.stationfromname), u, 'inc', v); }
-    ctrl.inc_fora = fora; // colaboradores com vendas fora da lista (ex.: novos) — acrescentar a INC_USERS se for caso disso
+      add(est(r.stationfromname), r.employee_name, 'inc', +r.revenue || 0); }
     // 5) frota e ocupação (opcional; relatório lento)
     let fl = null;
     if (opt.frota) { try { fl = agregaFrota(await frota(range), last); } catch (e) { ctrl.frota_erro = String(e.message || e); } }

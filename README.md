@@ -23,7 +23,7 @@
 | Detailed Rentals Report | detailedrentalreport | Date selection Check-ins (2), Closed contracts (1) | Turnover (chargenet), Net Rental (chargesubdisc), Rental Days (duration), fechados, danos (chargedamage), Diretos |
 | Detailed Rentals Report | detailedrentalreport | Date selection Check-outs (1), All contracts (3) | Contratos abertos e dias dos contratos abertos |
 | Extra Sales Report | extrasalesrpt | List type Check-outs (1), Sales User "Sold by" (1) | Vendas de extras ao balcão, por produto |
-| Extra Sales Report | extrasalesrpt | List type Check-outs (1), Sales User "Checked-out by" (0) | Extras Sales: Net Revenue dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW, só colaboradores de balcão (lista INC_USERS no coletor) |
+| Extra Sales Report | extrasalesrpt | List type Check-ins (2), Sales User "Sold by" (1), todos os utilizadores | Extras Sales: Net Revenue dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW, mês da Check-in Date, estação de check-out |
 | Fleet Utilization Report | fleetutilizationreport | Date basis (mês), Utilization per day | Frota média (avdays ÷ dias do mês), dias em aluguer (rentdays) e ocupação, por estação (campo station) |
 
 Mapeamento confirmado com o Base_Rentals: Check-out Date=datefrom, Check-in Date=dateto, Days=duration, Net Rental=chargesubdisc, Damages=chargedamage, Net=chargenet, Check-out User=user_from_name, Check-in User=user_to_name, Booking User=user_res_name, Corporate=corporate_name, Rate code=ratecode, Agr. No=radocno.
@@ -32,7 +32,8 @@ Mapeamento confirmado com o Base_Rentals: Check-out Date=datefrom, Check-in Date
 - Receita, Net Rental e Rental Days: mês da Check-in Date, Check-out station, Check-out User.
 - Abertos: Check-out Date (todos os contratos, incluindo os ainda ativos). Fechados e danos: Check-in Date e Check-in station.
 - Diretos: Net Rental, Rate code DIRETOS, Corporate vazio, Booking User.
-- Extras Sales (antes "Incremental Sales"; nome e regra alterados a 14/10/2026; campo interno `inc`): Extra Sales Report com List type Check-outs, mês da Check-out Date, Sales User "Checked-out by", extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW e os colaboradores de balcão selecionados pelo Nuno. Valor = Net Revenue, somado por estação de check-out e colaborador (estornos e zeros entram como estão). Colaboradores novos com vendas aparecem em ctrl.inc_fora e têm de ser acrescentados à lista INC_USERS do coletor. Substituiu o Incremental Sales Report do WheelSys em todo o histórico (jan/2025–set/2026).
+- Extras Sales (antes "Incremental Sales"; definido pelo Nuno a 14/10/2026; campo interno `inc`): Extra Sales Report com List type Check-ins (mês da Check-in Date), Sales User "Sold by", extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW, todos os utilizadores. Valor = Net Revenue, por estação de check-out e por quem vendeu (estornos e zeros como estão). Histórico jan/2025–set/2026 recalculado com as exportações do Nuno (Extra_Sales_Report_8 e _9) e, para out–dez/2025, com o mesmo relatório pedido ao WheelSys.
+- Equipa registada (Excel › Listas › Colaboradores, 40 nomes; guardada em config/equipa no dashboard): só estes colaboradores aparecem na análise individual (filtro de colaborador, Equipas, Extras por colaborador). Os restantes utilizadores (Account System, outsourcing, quem não está na lista) contam só nos totais de estação e Portugal.
 - Extras: venda = valor líquido > 0 por contrato e produto, vendido por colaborador (não "Account System"). Estornos abatem. Fora: VV (obrigatório), TOLLS e TOLL6 (portagens). FCI conta como pacote.
 - Penetração = contratos com venda ÷ contratos abertos. Extras €/dia = receita de extras ÷ dias dos contratos abertos.
 - Google Score substituído pelo Customer Verdict: NPS (promotores 9–10 menos detratores 0–6) e Experiência (média das 5 notas ×10), por mês do inquérito e estação de check-out; por colaborador via RA Number → Check-out User.
@@ -55,5 +56,5 @@ Mapeamento confirmado com o Base_Rentals: Check-out Date=datefrom, Check-in Date
 
 ## Validação (junho/2026, Portugal, contra o Excel)
 Turnover 484 943,12 € · Net Rental 312 707,35 € · Rental Days 15 552 · Abertos 1 915 · Fechados 1 897 · Danos 26 041,40 € · Incremental Sales 45 133,44 € · iRPD 2,90 €. Tudo coincide (com a regra antiga do Incremental Sales Report).
-Com a regra de 14/10/2026, o Extras Sales de setembro/2026 (72 866,61 €) coincide ao cêntimo com a exportação do Extra Sales Report do Nuno, por colaborador.
+Com a regra final de 14/10/2026: setembro/2026 Portugal = 86 054,40 €; Mattos Bruna = 9 193,81 € (confirmado pelo Nuno).
 Diferenças conhecidas do Excel: RNT-23624 está duplicado no Base_Rentals; a ocupação de Portugal no Excel (66,7 %) difere da recalculada (69,2 %), que segue o trabalho ISCTE.

@@ -129,7 +129,7 @@ footer b{color:var(--ink-2)}
   <header class="top">
     <div>
       <h1>ICONIQ <span>·</span> Desempenho das equipas</h1>
-      <p class="sub">Estações e colaboradores · AutoUnion Portugal</p><span id="impLast" hidden></span>
+      <p class="sub">Estações e colaboradores · AutoUnion Portugal</p>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
@@ -247,7 +247,7 @@ footer b{color:var(--ink-2)}
     <div><b>Regras.</b> Receita, Net Rental e Rental Days no mês da Check-in Date, atribuídos à Check-out station e ao Check-out User. Contratos abertos pela Check-out Date. Fechados e danos pela Check-in Date e Check-in station. Diretos = Net Rental com Rate code DIRETOS e Corporate vazio, atribuído ao Booking User.</div>
     <div><b>Extras.</b> Venda = extra opcional com valor líquido positivo, vendido ao balcão por um colaborador (Extra Sales Report, “Sold by”, mês da Check-out Date). Estornos abatem; valor zero não é venda. Fora: VV (obrigatório) e portagens (TOLLS, TOLL6). FCI conta como pacote. Penetração = contratos com venda ÷ contratos abertos. Extras €/dia = receita de extras ÷ dias dos contratos abertos.</div>
     <div><b>Customer Verdict.</b> NPS = % promotores (9–10) − % detratores (0–6) na pergunta de recomendação, no mês em que o inquérito foi respondido e na estação de check-out. Experiência = média das cinco notas do aluguer, em escala de 100. Por colaborador, cada resposta liga-se ao contrato (RA Number) e ao colaborador que fez o check-out.</div>
-    <div><b>Rácios.</b> RPD = receita ÷ Rental Days; iRPD = Extras Sales ÷ Rental Days. Extras Sales = Net Revenue do Extra Sales Report (Check-outs, Checked-out by) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW vendidos pelos colaboradores de balcão, no mês da Check-out Date; RPC = receita ÷ frota média. Somam-se numeradores e denominadores antes de dividir. Portugal soma as estações; utilização = dias em aluguer ÷ (frota × dias do mês). Comparação com o mesmo período do ano anterior.</div>
+    <div><b>Rácios.</b> RPD = receita ÷ Rental Days; iRPD = Extras Sales ÷ Rental Days. Extras Sales = Net Revenue do Extra Sales Report (List type Check-ins, Sold by) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW no mês da Check-in Date, atribuído à estação de check-out e a quem vendeu. Análise individual só para a equipa registada; vendas de outros utilizadores (Account System, outsourcing, etc.) contam apenas nos totais de estação e Portugal; RPC = receita ÷ frota média. Somam-se numeradores e denominadores antes de dividir. Portugal soma as estações; utilização = dias em aluguer ÷ (frota × dias do mês). Comparação com o mesmo período do ano anterior.</div>
   </footer>
 </div>
 
@@ -659,7 +659,8 @@ if(!window.__obs){window.__obs=1;
    f  = [estação, colaborador, turnover, net_rental, rental_days, abertos, fechados, danos, diretos, inc, c_venda, r_extras, dias_abertos]
    p  = [estação, colaborador, produto, contratos com venda, receita]
    fl = [estação, frota média, dias em aluguer, taxa]       ocs = [estação, booking, nº, veredict/google, nº] */
-function construir(docs){
+const EQUIPA_DEF=["Amaral Lívia", "Andrade Paloma", "Baptista Rafael", "Barros Jason", "Bilyk Julia", "Branco Francisco", "Carrasqueira Bruno", "Castro Tiago", "Cerqueira Nuno", "Correia Bruno", "Costa Guilherme", "Esteves Tania", "Farola Bruno", "Gahiva Bruno", "Lelo Diogo", "Lima Hipólito", "Lopes Daniela", "Lopes João", "Martins Rui", "Mattos Bruna", "Mendes Laura", "Mendinhascar Mendinhascar", "Mota Tânia", "Palma Guilherme", "Passos Jorge", "Paz Nicole", "Piccoli Guilherme", "Pimentel Tiago", "Pires Diana", "Rocha Lucas", "Rodrigues Marisa", "Santos Joana", "Santos Renato", "Silva Johanna", "Silva Tiago", "Truta Goergia", "Varolo Amanda", "Vasconcelos Rui", "Ventura Fernanda", "Ximenes Luan"]; // equipa registada (Excel › Listas); pode ser substituída pelo documento config/equipa
+function construir(docs,equipa){
   const EST=[{cod:'LXAAPT',nome:'Lisboa'},{cod:'OPTAPT',nome:'Porto'},{cod:'FAOAPT',nome:'Faro'}];
   const ei=Object.fromEntries(EST.map((e,i)=>[e.cod,i]));
   const cset=new Set();
@@ -681,7 +682,7 @@ function construir(docs){
   }
   return {meta:{dados_ate:ate,gerado_em:String(gerado).replace('T',' '),contratos},estacoes:EST,
     meses:['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
-    colaboradores:COL,sistema:COL.filter(c=>/^account system$/i.test(c)||c==='(sem colaborador)'),
+    colaboradores:COL,sistema:(()=>{const nz=x=>String(x).replace(/\s+/g,' ').trim().toLowerCase(); const E=new Set((equipa||EQUIPA_DEF).map(nz)); return COL.filter(c=>/^account system$/i.test(c)||c==='(sem colaborador)'||!E.has(nz(c)));})(),
     campos:['ano','mes','est','colab','turnover','net_rental','rental_days','abertos','fechados','danos','diretos','inc','c_venda','r_extras','dias_abertos','vv','vv_ctr'],
     factos,prod,frota,ocs,ver,ativ,temExtras,extMeses};
 }
@@ -693,8 +694,7 @@ function construir(docs){
   msg('<span class="note">A carregar dados…</span>');
   let D;
   try{const r=await fetch('data/meses.json?v='+Date.now(),{cache:'no-store'}); if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json(); D=construir(new Map(Object.entries(j.meses)));
-    $('impLast').textContent='Dados até '+String(j.gerado).replace('T',' ');}
+    const j=await r.json(); D=construir(new Map(Object.entries(j.meses)),j.equipa||null);}
   catch(e){msg('<b>Não foi possível ler os dados</b> <span class="note">('+(e.message||e)+').</span>');return;}
   if(!D.factos.length){msg('<b>Ainda sem dados.</b>');return;}
   try{app(D);}catch(e){msg('<b>Erro ao desenhar o painel.</b><span class="note">'+(e.message||e)+'</span>');}
