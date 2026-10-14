@@ -249,6 +249,7 @@ footer b{color:var(--ink-2)}
     <div><b>Extras.</b> Venda = extra opcional com valor líquido positivo, vendido ao balcão por um colaborador (Extra Sales Report, “Sold by”, mês da Check-out Date). Estornos abatem; valor zero não é venda. Fora: VV (obrigatório) e portagens (TOLLS, TOLL6). FCI conta como pacote. Penetração = contratos com venda ÷ contratos abertos. Extras €/dia = receita de extras ÷ dias dos contratos abertos.</div>
     <div><b>Customer Verdict.</b> NPS = % promotores (9–10) − % detratores (0–6) na pergunta de recomendação, no mês em que o inquérito foi respondido e na estação de check-out. Experiência = média das cinco notas do aluguer, em escala de 100. Por colaborador, cada resposta liga-se ao contrato (RA Number) e ao colaborador que fez o check-out.</div>
     <div><b>Rácios.</b> RPD = receita ÷ Rental Days; iRPD = Extras Sales ÷ Rental Days. Extras Sales = Net Revenue do Extra Sales Report (List type Check-ins, Sold by) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW no mês da Check-in Date, atribuído à estação de check-out e a quem vendeu. Análise individual só para a equipa registada; vendas de outros utilizadores (Account System, outsourcing, etc.) contam apenas nos totais de estação e Portugal; RPC = receita ÷ frota média. Somam-se numeradores e denominadores antes de dividir. Portugal soma as estações; utilização = dias em aluguer ÷ (frota × dias do mês). Comparação com o mesmo período do ano anterior.</div>
+    <div><b>Google Reviews.</b> Pontuação (1–5) e nº de reviews da ficha Google de cada estação (AutoUnion Lisboa, Porto Airport e Faro Airport). É uma nota acumulada: o painel mostra a última leitura até ao fim do período escolhido; Portugal = média ponderada pelo nº de reviews. Meta 4,5.</div>
   </footer>
 </div>
 
@@ -304,7 +305,15 @@ function soma({ano,meses,est,col}){
     o.util = fd? dal/fd : null; o.on_rent = fd? dal : null;
     for(const c of D.ocs){ if(c[0]!==ano||!ms.has(c[1]))continue; if(est>=0&&c[2]!==est)continue;
       bk+=c[3]*c[4]; bkn+=c[4]; gg+=c[5]*c[6]; ggn+=c[6]; }
-    o.bk=bkn?bk/bkn:null; o.bkn=bkn||null; o.gg=ggn?gg/ggn:null; o.ggn=ggn||null;
+    o.bk=bkn?bk/bkn:null; o.bkn=bkn||null;
+    // Google Reviews: pontuação acumulada da ficha Google de cada estação → usa a última leitura até ao fim do período
+    { const fim=Math.max(...meses), por=[]; gg=0; ggn=0; let ref=null;
+      for(let s=0;s<D.estacoes.length;s++){ if(est>=0&&s!==est)continue;
+        let best=null; for(const c of D.ocs){ if(c[2]!==s||!(c[6]>0))continue; if(c[0]>ano||(c[0]===ano&&c[1]>fim))continue;
+          if(!best||c[0]>best[0]||(c[0]===best[0]&&c[1]>best[1])) best=c; }
+        if(best){ gg+=best[5]*best[6]; ggn+=best[6]; por.push([D.estacoes[s].nome,best[5],best[6]]);
+          const r=best[0]*100+best[1]; if(ref==null||r<ref) ref=r; } }
+      o.gg=ggn?gg/ggn:null; o.ggn=ggn||null; o.gg_est=por; o.gg_ref=ref; }
   }
   { let n=0,pr=0,de=0,nr=0,se=0,ne=0;
     for(const v of D.ver){ if(v[0]!==ano||!ms.has(v[1]))continue; if(est>=0&&v[2]!==est)continue; if(col>=0&&v[3]!==col)continue;
@@ -343,7 +352,7 @@ const IND={
   bk:{l:'Booking Score',f:sc,noCol:true,meta:8},
   nps:{l:'NPS Customer Verdict',f:v=>v==null?'—':(v>0?'+':'')+nf1.format(v),pts:true},
   exp:{l:'Experiência de aluguer',f:v=>v==null?'—':nf1.format(v)+' /100',pts:true},
-  gg:{l:'Google Score',f:sc,noCol:true,meta:4.5},
+  gg:{l:'Google Reviews',f:sc,noCol:true,meta:4.5},
   pen:{l:'Penetração de extras',f:pct,pp:true},
   vv:{l:'Faturação Via Verde',f:eur},
   vv_peso:{l:'Peso da Via Verde na receita',f:pct,pp:true},
@@ -356,7 +365,7 @@ const IND={
   ext_ctr:{l:'Extras por contrato',f:eur2},
   ext_dia:{l:'Extras €/dia',f:eur2},
 };
-const KPI_EST=['turnover','net_rental','rental_days','rpd','rpdn','abertos','ativos','fechados','frota','on_rent','util','rpc_net','rpc','inc','irpd','diretos','danos','nps','exp','bk'];
+const KPI_EST=['turnover','net_rental','rental_days','rpd','rpdn','abertos','ativos','fechados','frota','on_rent','util','rpc_net','rpc','inc','irpd','diretos','danos','nps','exp','gg'];
 
 /* ---------- filtros ---------- */
 const $=id=>document.getElementById(id);
@@ -417,8 +426,9 @@ function drawKPI(){
   for(const k of keys){
     const v=cur[k]; let extra='';
     if(k==='bk'||k==='gg'){ const n=k==='bk'?cur.bkn:cur.ggn;
+      const det = k==='gg'&&cur.gg_est&&cur.gg_est.length ? `<span>${cur.gg_est.length>1?cur.gg_est.map(e=>e[0]+' '+e[1].toFixed(1).replace('.',',')).join(' · ')+' · ':''}${num(n)} reviews${cur.gg_ref?' · leitura '+MESC[cur.gg_ref%100-1]+'/'+Math.floor(cur.gg_ref/100):''}</span>` : `<span>${num(n)} reviews</span>`;
       extra = v==null?'<span class="note">sem avaliações</span>':
-        `<span class="delta ${v>=IND[k].meta?'up':'down'}">${v>=IND[k].meta?'✓ meta':'✗ abaixo da meta'} ${IND[k].meta.toString().replace('.',',')}</span><span>${num(n)} reviews</span>`;
+        `<span class="delta ${v>=IND[k].meta?'up':'down'}">${v>=IND[k].meta?'✓ meta':'✗ abaixo da meta'} ${IND[k].meta.toString().replace('.',',')}</span>${det}`;
     } else if(k==='ativos'){ extra=`<span>abertos no período e ainda em aluguer · ${num(cur.abertos_fech)} já fechados</span>`;
     } else extra=deltaHtml(k,v,prev[k])+(k==='nps'?`<span>${num(cur.nps_n)} respostas</span>`:'');
     h+=`<div class="kpi${k==='turnover'||k==='irpd'?' hl':''}"><span class="l">${IND[k].l}</span><span class="v">${IND[k].f(v)}</span><span class="d">${extra}</span></div>`;
