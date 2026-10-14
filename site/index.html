@@ -247,7 +247,7 @@ footer b{color:var(--ink-2)}
     <div><b>Regras.</b> Receita, Net Rental e Rental Days no mês da Check-in Date, atribuídos à Check-out station e ao Check-out User. Contratos abertos pela Check-out Date. Fechados e danos pela Check-in Date e Check-in station. Diretos = Net Rental com Rate code DIRETOS e Corporate vazio, atribuído ao Booking User.</div>
     <div><b>Extras.</b> Venda = extra opcional com valor líquido positivo, vendido ao balcão por um colaborador (Extra Sales Report, “Sold by”, mês da Check-out Date). Estornos abatem; valor zero não é venda. Fora: VV (obrigatório) e portagens (TOLLS, TOLL6). FCI conta como pacote. Penetração = contratos com venda ÷ contratos abertos. Extras €/dia = receita de extras ÷ dias dos contratos abertos.</div>
     <div><b>Customer Verdict.</b> NPS = % promotores (9–10) − % detratores (0–6) na pergunta de recomendação, no mês em que o inquérito foi respondido e na estação de check-out. Experiência = média das cinco notas do aluguer, em escala de 100. Por colaborador, cada resposta liga-se ao contrato (RA Number) e ao colaborador que fez o check-out.</div>
-    <div><b>Rácios.</b> RPD = receita ÷ Rental Days; iRPD = Incremental Sales ÷ Rental Days. Incremental Sales = Net Revenue do Extra Sales Report (Check-outs, Checked-out by) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW vendidos pelos colaboradores de balcão, no mês da Check-out Date; RPC = receita ÷ frota média. Somam-se numeradores e denominadores antes de dividir. Portugal soma as estações; utilização = dias em aluguer ÷ (frota × dias do mês). Comparação com o mesmo período do ano anterior.</div>
+    <div><b>Rácios.</b> RPD = receita ÷ Rental Days; iRPD = Extras Sales ÷ Rental Days. Extras Sales = Net Revenue do Extra Sales Report (Check-outs, Checked-out by) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW vendidos pelos colaboradores de balcão, no mês da Check-out Date; RPC = receita ÷ frota média. Somam-se numeradores e denominadores antes de dividir. Portugal soma as estações; utilização = dias em aluguer ÷ (frota × dias do mês). Comparação com o mesmo período do ano anterior.</div>
   </footer>
 </div>
 
@@ -334,7 +334,7 @@ const IND={
   rpc_net:{l:'Revenue Per Car',f:eur,noCol:true},
   util:{l:'Utilização',f:pct,pp:true,noCol:true},
   rpc:{l:'Final RPC',f:eur,noCol:true},
-  inc:{l:'Incremental Sales',f:eur},
+  inc:{l:'Extras Sales',f:eur},
   irpd:{l:'iRPD',f:eur2},
   movimento:{l:'Movimento total',f:num},
   diretos:{l:'Diretos',f:eur},
@@ -377,9 +377,9 @@ function fillCol(){
   opts($('fCol'),[[-1,'Todos']].concat(list.map(i=>[i,COL[i]])),S.col);
 }
 fillCol();
-const mOpts=[['turnover','Total Turnover'],['rpd','RPD Total'],['irpd','iRPD'],['inc','Incremental Sales'],['rental_days','Rental Days'],['abertos','Contratos abertos'],['util','Utilização'],['on_rent','On Rent Days'],['rpc_net','Revenue Per Car'],['rpc','Final RPC'],['danos','Danos'],['diretos','Diretos'],['nps','NPS Customer Verdict'],['exp','Experiência de aluguer']];
+const mOpts=[['turnover','Total Turnover'],['rpd','RPD Total'],['irpd','iRPD'],['inc','Extras Sales'],['rental_days','Rental Days'],['abertos','Contratos abertos'],['util','Utilização'],['on_rent','On Rent Days'],['rpc_net','Revenue Per Car'],['rpc','Final RPC'],['danos','Danos'],['diretos','Diretos'],['nps','NPS Customer Verdict'],['exp','Experiência de aluguer']];
 opts($('mEvo'),mOpts,S.mEvo); opts($('mEst'),mOpts,S.mEst);
-opts($('mRank'),[['irpd','iRPD'],['inc','Incremental Sales'],['vendas_diretos','Vendas + Diretos'],['rpd','RPD Total'],['abertos','Contratos abertos'],['nps','NPS Customer Verdict']],S.mRank);
+opts($('mRank'),[['irpd','iRPD'],['inc','Extras Sales'],['vendas_diretos','Vendas + Diretos'],['rpd','RPD Total'],['abertos','Contratos abertos'],['nps','NPS Customer Verdict']],S.mRank);
 
 $('fAno').onchange=e=>{S.ano=+e.target.value;fillMes();fillCol();render();};
 $('fMes').onchange=e=>{S.mes=+e.target.value;fillCol();render();};
@@ -490,7 +490,7 @@ function linhasEquipa(){
     o.movimento=o.abertos+o.fechados; o.irpd_prev=prevIrpd.get(o.c); [o.nps,o.nps_n]=npsC.get(o.c);
     o.estP=[...o.est.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]); return o;});
 }
-const COLS=[['pos','#'],['nome','Colaborador'],['est','Estação'],['inc','Incremental Sales'],['rental_days','Rental Days'],['irpd','iRPD'],['irpd_prev','iRPD ano ant.'],['rpd','RPD Total'],['abertos','Abertos'],['fechados','Fechados'],['diretos','Diretos'],['vendas_diretos','Vendas + Diretos'],['danos','Danos'],['nps','NPS'],['nps_n','Respostas']];
+const COLS=[['pos','#'],['nome','Colaborador'],['est','Estação'],['inc','Extras Sales'],['rental_days','Rental Days'],['irpd','iRPD'],['irpd_prev','iRPD ano ant.'],['rpd','RPD Total'],['abertos','Abertos'],['fechados','Fechados'],['diretos','Diretos'],['vendas_diretos','Vendas + Diretos'],['danos','Danos'],['nps','NPS'],['nps_n','Respostas']];
 function drawEquipas(){
   let L=linhasEquipa();
   const k=S.mRank, fmt=fmtOf(k);

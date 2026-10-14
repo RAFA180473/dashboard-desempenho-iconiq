@@ -1,4 +1,4 @@
-/* ICONIQ | Coletor WheelSys  v1.2 (14/10/2026: Incremental Sales pelo Extra Sales Report, Checked-out by)
+/* ICONIQ | Coletor WheelSys  v1.2 (14/10/2026: Extras Sales (ex-Incremental Sales) pelo Extra Sales Report, Checked-out by)
  * Corre dentro de um separador do WheelSys (iconiqfleet.wheelsys.io/ui/...) com sessão iniciada.
  * Usa os mesmos pedidos que os relatórios do ecrã (só leitura) e agrega por mês × estação × colaborador.
  * Não guarda dados pessoais de clientes (nomes, matrículas, emails): só totais.
