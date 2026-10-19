@@ -123,10 +123,16 @@ td b{color:var(--accent)}
 footer{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px;max-width:90ch;border-top:1px solid var(--line);padding-top:14px}
 footer b{color:var(--ink)}
 .tab-panel[hidden]{display:none}
+td.ok{color:var(--good)} td.ko{color:var(--bad)} td.ok b,td.ko b{color:inherit}
+#avKpis{grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))}
+#tblAv tbody tr,#tblRcCrit tbody tr,#tblRede tbody tr{cursor:default}
+#tblAv th,#tblRcCrit th,#tblRede th{cursor:default}
+#tblAv th:nth-child(n+2),#tblAv td:nth-child(n+2),#tblRcCrit th:nth-child(n+2),#tblRcCrit td:nth-child(n+2),#tblRede th:nth-child(n+3),#tblRede td:nth-child(n+3){text-align:right}
 @media (max-width:520px){.kpi .v{font-size:21px}.chart{height:240px}select{min-width:0}.stamp{text-align:left}.brand img{height:32px}.brand .sep{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-
+</head>
+<body>
 <div class="wrap">
   <header class="top">
     <div class="brand">
@@ -152,6 +158,7 @@ footer b{color:var(--ink)}
         <button role="tab" data-tab="eq" aria-pressed="false">Equipas</button>
         <button role="tab" data-tab="ext" aria-pressed="false">Extras</button>
         <button role="tab" data-tab="vv" aria-pressed="false">Via Verde e danos</button>
+        <button role="tab" data-tab="av" aria-pressed="false">Avaliações</button>
       </div>
     </div>
   </div>
@@ -219,7 +226,7 @@ footer b{color:var(--ink)}
         </div>
       </div>
       <div class="panel">
-        <div class="ph"><h2>Produtos</h2><span class="note">Penetração = contratos com o produto ÷ contratos abertos. Um contrato pode ter vários produtos.</span></div>
+        <div class="ph"><h2>Produtos</h2><span class="note">Penetração = contratos com o produto ÷ contratos abertos. Um contrato pode ter vários produtos. “Só totais” = fora da análise por colaborador.</span></div>
         <div class="tbl-wrap"><table id="tblProd"><thead><tr><th>Código</th><th>Produto</th><th>Contratos</th><th>Penetração</th><th>Receita</th><th>€/dia</th><th>Peso nos extras</th></tr></thead><tbody></tbody></table></div>
       </div>
     </div>
@@ -248,13 +255,57 @@ footer b{color:var(--ink)}
     </div>
   </div>
 
+  <!-- AVALIAÇÕES -->
+  <div class="tab-panel" id="tab-av" hidden>
+    <div id="avMain" class="stack">
+      <p class="note" id="avNote"></p>
+      <section class="kpis" id="avKpis" aria-label="Indicadores de avaliação"></section>
+      <div class="panel">
+        <div class="ph"><h2>Quadro de avaliação por estação</h2><span class="note" id="avTblNote"></span></div>
+        <div class="tbl-wrap"><table id="tblAv" class="tbl-av"><thead></thead><tbody></tbody></table></div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="ph"><h2 id="tAvEvo">Evolução mensal</h2>
+            <select id="mAv" class="small" aria-label="Indicador de avaliação">
+              <option value="rep">Nota global de avaliação</option><option value="sc">Sunny Cars</option>
+              <option value="rc">Rentalcars</option><option value="exp5">Customer Verdict · Experiência</option>
+              <option value="nps">NPS Customer Verdict</option></select></div>
+          <div class="legend" id="lgAvEvo"></div>
+          <div class="chart"><canvas id="cAvEvo" aria-label="Evolução mensal das avaliações"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><h2>Fontes por estação · escala 0–5</h2></div>
+          <div class="legend" id="lgAvEst"></div>
+          <div class="chart"><canvas id="cAvEst" aria-label="Notas por fonte e estação"></canvas></div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="ph"><h2>Rentalcars · temas mais referidos</h2><span class="note" id="avTemasNote"></span></div>
+          <div class="legend" id="lgAvTemas"></div>
+          <div class="chart tall" id="avTemasBox"><canvas id="cAvTemas" aria-label="Temas positivos e negativos nas avaliações Rentalcars"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><h2>Rentalcars · critérios</h2><span class="note">Escala 0–10, acumulado da ficha</span></div>
+          <div class="tbl-wrap"><table id="tblRcCrit"><thead></thead><tbody></tbody></table></div>
+          <div class="ph"><h2>Outras localizações AutoUnion</h2><span class="note">Referência; fora dos totais de Portugal</span></div>
+          <div class="tbl-wrap"><table id="tblRede"><thead><tr><th>Localização</th><th>Fonte</th><th>Avaliações</th><th>Nota</th><th>Escala 0–5</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <footer id="foot">
     <div><b>Regras.</b> Receita, Net Rental e Rental Days no mês da Check-in Date, atribuídos à Check-out station e ao Check-out User. Contratos abertos pela Check-out Date. Fechados e danos pela Check-in Date e Check-in station. Diretos = Net Rental com Rate code DIRETOS e Corporate vazio, atribuído ao Booking User.</div>
-    <div><b>Extras.</b> Venda = extra opcional com valor líquido positivo, vendido ao balcão por um colaborador (Extra Sales Report, “Sold by”, mês da Check-out Date). Estornos abatem; valor zero não é venda. Fora: VV (obrigatório) e portagens (TOLLS, TOLL6). FCI conta como pacote. Penetração = contratos com venda ÷ contratos abertos. Extras €/dia = receita de extras ÷ dias dos contratos abertos.</div>
+    <div><b>Extras.</b> Venda = extra opcional com valor líquido positivo, vendido ao balcão por um colaborador (Extra Sales Report, “Sold by”, mês da Check-out Date). Estornos abatem; valor zero não é venda. Fora: VV (obrigatório) e portagens (TOLLS, TOLL6). FCI conta como pacote. YDF, RAPOR, SDF, BBS, CBS, BOO e GPS contam nos totais de estação e Portugal, mas ficam fora da análise por colaborador (ranking, filtro de colaborador e produtos do colaborador). Penetração = contratos com venda ÷ contratos abertos. Extras €/dia = receita de extras ÷ dias dos contratos abertos.</div>
     <div><b>Customer Verdict.</b> NPS = % promotores (9–10) − % detratores (0–6) na pergunta de recomendação, no mês em que o inquérito foi respondido e na estação de check-out. Experiência = média das cinco notas do aluguer, em escala de 100. Por colaborador, cada resposta liga-se ao contrato (RA Number) e ao colaborador que fez o check-out.</div>
     <div><b>Rácios.</b> RPD = receita ÷ Rental Days; iRPD = Extras Sales ÷ Rental Days. Extras Sales = Net Revenue do Extra Sales Report (List type Check-ins, Sold by) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW no mês da Check-in Date, atribuído à estação de check-out e a quem vendeu. Análise individual só para a equipa registada; vendas de outros utilizadores (Account System, outsourcing, etc.) contam apenas nos totais de estação e Portugal; RPC = receita ÷ frota média. Somam-se numeradores e denominadores antes de dividir. Portugal soma as estações; utilização = dias em aluguer ÷ (frota × dias do mês). Comparação com o mesmo período do ano anterior.</div>
     <div><b>Google Reviews.</b> Pontuação (1–5) e nº de reviews da ficha Google de cada estação (AutoUnion Lisboa, Porto Airport e Faro Airport). É uma nota acumulada: o painel mostra a última leitura até ao fim do período escolhido (no período mais recente, a leitura mais recente); Portugal = média ponderada pelo nº de reviews. Meta 4,5.</div>
+    <div><b>Sunny Cars.</b> Avaliações dos clientes Sunny Cars (escala 1–5), no mês da avaliação e por estação: nota global (média de viatura, espera e atendimento) e as três notas parciais; reclamações = avaliações marcadas como reclamação. Meta 4,5. Ficheiro carregado: julho–setembro de 2026.</div>
+    <div><b>Rentalcars.</b> Nota média das avaliações (escala 0–10) no mês da avaliação; Lisboa = Humberto Delgado Airport, Porto = Francisco Sá Carneiro Airport, Faro = Faro Airport. Critérios e temas vêm do ficheiro exportado (acumulado da ficha). Meta 9,0 (equivalente a 4,5 em 5).</div>
+    <div><b>Nota global de avaliação.</b> Média ponderada pelo nº de avaliações, na escala 0–5, de Sunny Cars (nota tal como está), Rentalcars (nota ÷ 2) e Customer Verdict Experiência (÷ 20). Google fica de fora porque é uma nota acumulada da ficha, não do mês. Sem ligação ao colaborador: Sunny Cars e Rentalcars não trazem o nº de contrato WheelSys.</div>
+    <div><b>Mês parcial.</b> Quando o último mês tem dados só até um dia (ex.: 1–15 de outubro), a comparação com o ano anterior usa o mesmo intervalo de dias desse mês, recolhido à parte do WheelSys. A frota média desse mês divide pelos dias do intervalo.</div>
   </footer>
 </div>
 
@@ -283,6 +334,16 @@ const ultimo=D.meta.dados_ate.split('-').map(Number); // [a,m,d]
 const S=window.__S||(window.__S={ano:ultimo[0],mes:ultimo[1],est:-1,col:-1,tab:'est',mEvo:'turnover',mEst:'rpd',mRank:'irpd',mExt:'pen',sort:'inc',dir:-1,selCol:-1});
 if(!anos.includes(S.ano)){S.ano=ultimo[0];S.mes=ultimo[1];}
 if(!window.__S0){window.__S0=1;try{const t=localStorage.getItem('iconiq-tab');if(t)S.tab=t;}catch(e){}}
+if(!S.mAv)S.mAv='rep';
+
+/* ---------- mês parcial (ex.: 1–15 de outubro) ----------
+   P = {y,m,dia}. Ao ver o ano P.y, o mês P.m do ano anterior usa o homólogo do mesmo intervalo de dias (D.hom). */
+const P=D.parcial;
+const usaHom=()=>!!(P&&D.hom&&S.ano===P.y);
+const FX=()=>usaHom()?D.hom.factos:D.factos;
+const PR=()=>usaHom()?D.hom.prod:D.prod;
+const FR=()=>usaHom()?D.hom.frota:D.frota;
+const diasMes=(a,m)=>P&&m===P.m&&(a===P.y||(a===P.y-1&&usaHom()))?P.dia:new Date(a,m,0).getDate();
 
 function mesesDoPeriodo(ano,mes){ // mes>0 → um mês; 0 → acumulado até ao último mês com dados
   if(mes>0) return [mes];
@@ -291,10 +352,10 @@ function mesesDoPeriodo(ano,mes){ // mes>0 → um mês; 0 → acumulado até ao 
 }
 
 /* ---------- agregação ---------- */
-const MED=['turnover','net_rental','rental_days','abertos','fechados','danos','diretos','inc','c_venda','r_extras','dias_abertos','vv','vv_ctr'];
-function soma({ano,meses,est,col}){
+const MED=['turnover','net_rental','rental_days','abertos','fechados','danos','diretos','inc','c_venda','r_extras','dias_abertos','vv','vv_ctr','c_venda_col','r_extras_col'];
+function soma({ano,meses,est,col,ind}){
   const o=Object.fromEntries(MED.map(m=>[m,0])), ms=new Set(meses);
-  for(const r of D.factos){
+  for(const r of FX()){
     if(r[F.ano]!==ano||!ms.has(r[F.mes]))continue;
     if(est>=0&&r[F.est]!==est)continue;
     if(col>=0&&r[F.colab]!==col)continue;
@@ -302,10 +363,10 @@ function soma({ano,meses,est,col}){
   }
   if(col<0){
     let fr=0,fd=0,dal=0,n=0,bk=0,bkn=0,gg=0,ggn=0;
-    for(const f of D.frota){ if(f[0]!==ano||!ms.has(f[1]))continue; if(est>=0&&f[2]!==est)continue;
+    for(const f of FR()){ if(f[0]!==ano||!ms.has(f[1]))continue; if(est>=0&&f[2]!==est)continue;
       fd+=f[5]; dal+=f[4]; n++; }
-    // frota média ponderada pelos dias: soma(frota×dias)/dias do período
-    const diasPer=meses.reduce((s,m)=>s+new Date(ano,m,0).getDate(),0);
+    // frota média ponderada pelos dias: soma(frota×dias)/dias do período (mês parcial: dias do intervalo)
+    const diasPer=meses.reduce((s,m)=>s+diasMes(ano,m),0);
     o.frota = fd? fd/diasPer : null;
     o.util = fd? dal/fd : null; o.on_rent = fd? dal : null;
     for(const c of D.ocs){ if(c[0]!==ano||!ms.has(c[1]))continue; if(est>=0&&c[2]!==est)continue;
@@ -319,11 +380,21 @@ function soma({ano,meses,est,col}){
         if(best){ gg+=best[5]*best[6]; ggn+=best[6]; por.push([D.estacoes[s].nome,best[5],best[6]]);
           const r=best[0]*100+best[1]; if(ref==null||r<ref) ref=r; } }
       o.gg=ggn?gg/ggn:null; o.ggn=ggn||null; o.gg_est=por; o.gg_ref=ref; }
+    // Sunny Cars (1–5) e Rentalcars (0–10), por mês da avaliação e estação
+    { let n=0,s=0,v=0,e=0,a=0,rl=0,rc=0,rcn=0;
+      for(const r of D.av){ if(r[0]!==ano||!ms.has(r[1]))continue; if(est>=0&&r[2]!==est)continue;
+        if(r[3]==='SC'){ n+=r[4]; s+=r[5]*r[4]; v+=r[6]*r[4]; e+=r[7]*r[4]; a+=r[8]*r[4]; rl+=r[9]||0; }
+        else if(r[3]==='RC'){ rcn+=r[4]; rc+=r[5]*r[4]; } }
+      o.scn=n||null; o.sc=n?s/n:null; o.sc_v=n?v/n:null; o.sc_e=n?e/n:null; o.sc_a=n?a/n:null; o.sc_recl=n?rl/n:null; o.sc_recl_n=rl;
+      o.rcn=rcn||null; o.rc=rcn?rc/rcn:null; }
   }
-  { let n=0,pr=0,de=0,nr=0,se=0,ne=0;
+  { let n=0,pr=0,de=0,nr=0,se=0,ne=0,nx=0;
     for(const v of D.ver){ if(v[0]!==ano||!ms.has(v[1]))continue; if(est>=0&&v[2]!==est)continue; if(col>=0&&v[3]!==col)continue;
-      n++; if(v[4]!=null){nr++; if(v[4]>=9)pr++; else if(v[4]<=6)de++;} for(let i=5;i<10;i++) if(v[i]!=null){se+=v[i];ne++;} }
-    o.nps_n=n; o.nps=nr?(pr-de)/nr*100:null; o.exp=ne?se/ne*10:null; }
+      n++; if(v[4]!=null){nr++; if(v[4]>=9)pr++; else if(v[4]<=6)de++;} let tem=false; for(let i=5;i<10;i++) if(v[i]!=null){se+=v[i];ne++;tem=true;} if(tem)nx++; }
+    o.nps_n=n; o.nps=nr?(pr-de)/nr*100:null; o.exp=ne?se/ne*10:null; o.exp_n=nx; o.exp5=o.exp!=null?o.exp/20:null; }
+  // nota global de avaliação (0–5): Sunny Cars + Rentalcars ÷ 2 + Verdict Experiência ÷ 20, ponderada pelo nº de avaliações
+  if(col<0){ let tw=0,ts=0; for(const [x,w] of [[o.sc,o.scn||0],[o.rc!=null?o.rc/2:null,o.rcn||0],[o.exp5,o.exp_n||0]]) if(x!=null&&w){tw+=w;ts+=x*w;}
+    o.rep=tw?ts/tw:null; o.rep_n=tw||null; }
   o.ativos=0; for(const a of D.ativ){ if(a[0]===ano&&ms.has(a[1])&&(est<0||a[2]===est)&&(col<0||a[3]===col)) o.ativos+=a[4]; }
   o.abertos_fech=o.abertos-o.ativos;
   o.rpd=div(o.turnover,o.rental_days); o.rpdn=div(o.net_rental,o.rental_days);
@@ -331,6 +402,8 @@ function soma({ano,meses,est,col}){
   o.movimento=o.abertos+o.fechados; o.vendas_diretos=o.inc+o.diretos;
   o.vv_peso=div(o.vv,o.turnover); o.vv_ctr_pct=div(o.vv_ctr,o.fechados); o.vv_med=div(o.vv,o.vv_ctr);
   o.rpd_sem_vv=div(o.turnover-o.vv,o.rental_days); o.danos_peso=div(o.danos,o.turnover); o.danos_ctr=div(o.danos,o.fechados);
+  // análise por colaborador: extras sem os produtos só globais (EXTRAS_SO_GLOBAL)
+  if(ind??col>=0){ o.c_venda=o.c_venda_col; o.r_extras=o.r_extras_col; }
   o.pen=div(o.c_venda,o.abertos); o.ext_dia=div(o.r_extras,o.dias_abertos); o.ext_ctr=div(o.r_extras,o.abertos);
   return o;
 }
@@ -358,6 +431,11 @@ const IND={
   nps:{l:'NPS Customer Verdict',f:v=>v==null?'—':(v>0?'+':'')+nf1.format(v),pts:true},
   exp:{l:'Experiência de aluguer',f:v=>v==null?'—':nf1.format(v)+' /100',pts:true},
   gg:{l:'Google Reviews',f:sc,noCol:true,meta:4.5},
+  rep:{l:'Nota global de avaliação',f:sc,noCol:true,meta:4.5,s2:true,n:'rep_n',u:'avaliações'},
+  sc:{l:'Sunny Cars',f:sc,noCol:true,meta:4.5,s2:true,n:'scn',u:'avaliações'},
+  rc:{l:'Rentalcars',f:v=>v==null?'—':nf1.format(v),noCol:true,meta:9,s2:true,n:'rcn',u:'avaliações'},
+  exp5:{l:'Experiência Verdict (0–5)',f:sc,s2:true},
+  sc_recl:{l:'Reclamações Sunny Cars',f:pct,noCol:true,pp:true,inv:true},
   pen:{l:'Penetração de extras',f:pct,pp:true},
   vv:{l:'Faturação Via Verde',f:eur},
   vv_peso:{l:'Peso da Via Verde na receita',f:pct,pp:true},
@@ -370,7 +448,7 @@ const IND={
   ext_ctr:{l:'Extras por contrato',f:eur2},
   ext_dia:{l:'Extras €/dia',f:eur2},
 };
-const KPI_EST=['turnover','net_rental','rental_days','rpd','rpdn','abertos','ativos','fechados','frota','on_rent','util','rpc_net','rpc','inc','irpd','diretos','danos','nps','exp','gg'];
+const KPI_EST=['turnover','net_rental','rental_days','rpd','rpdn','abertos','ativos','fechados','frota','on_rent','util','rpc_net','rpc','inc','irpd','diretos','danos','nps','exp','gg','rep'];
 
 /* ---------- filtros ---------- */
 const $=id=>document.getElementById(id);
@@ -378,7 +456,8 @@ function opts(sel,list,val){sel.innerHTML=list.map(([v,t])=>`<option value="${v}
 opts($('fAno'),anos.map(a=>[a,a]),S.ano);
 function fillMes(){
   const lim=S.ano===ultimo[0]?ultimo[1]:12;
-  const list=[[0,`Acumulado Jan–${MESC[lim-1]}`]].concat(MESES.slice(0,lim).map((m,i)=>[i+1,m]));
+  const pa=P&&S.ano===P.y;
+  const list=[[0,`Acumulado Jan–${pa&&P.m===lim?P.dia+' ':''}${MESC[lim-1]}`]].concat(MESES.slice(0,lim).map((m,i)=>[i+1,pa&&P.m===i+1?`${m} (1–${P.dia})`:m]));
   if(S.mes>lim)S.mes=lim; opts($('fMes'),list,S.mes);
 }
 fillMes();
@@ -392,7 +471,7 @@ function fillCol(){
   opts($('fCol'),[[-1,'Todos']].concat(list.map(i=>[i,COL[i]])),S.col);
 }
 fillCol();
-const mOpts=[['turnover','Total Turnover'],['rpd','RPD Total'],['irpd','iRPD'],['inc','Extras Sales'],['rental_days','Rental Days'],['abertos','Contratos abertos'],['util','Utilização'],['on_rent','On Rent Days'],['rpc_net','Revenue Per Car'],['rpc','Final RPC'],['danos','Danos'],['diretos','Diretos'],['nps','NPS Customer Verdict'],['exp','Experiência de aluguer']];
+const mOpts=[['turnover','Total Turnover'],['rpd','RPD Total'],['irpd','iRPD'],['inc','Extras Sales'],['rental_days','Rental Days'],['abertos','Contratos abertos'],['util','Utilização'],['on_rent','On Rent Days'],['rpc_net','Revenue Per Car'],['rpc','Final RPC'],['danos','Danos'],['diretos','Diretos'],['nps','NPS Customer Verdict'],['exp','Experiência de aluguer'],['rep','Nota global de avaliação'],['sc','Sunny Cars'],['rc','Rentalcars']];
 opts($('mEvo'),mOpts,S.mEvo); opts($('mEst'),mOpts,S.mEst);
 opts($('mRank'),[['irpd','iRPD'],['inc','Extras Sales'],['vendas_diretos','Vendas + Diretos'],['rpd','RPD Total'],['abertos','Contratos abertos'],['nps','NPS Customer Verdict']],S.mRank);
 
@@ -406,7 +485,8 @@ $('mRank').onchange=e=>{S.mRank=e.target.value;S.sort=e.target.value;S.dir=-1;dr
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;try{localStorage.setItem('iconiq-tab',S.tab)}catch(e){};showTab();});
 function showTab(){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===S.tab));
-  for(const t of ['est','eq','ext','vv'])$('tab-'+t).hidden=t!==S.tab;
+  for(const t of ['est','eq','ext','vv','av'])$('tab-'+t).hidden=t!==S.tab;
+  if(S.tab==='av'){$('mAv').value=S.mAv;drawAv();}
   if(S.tab==='eq')drawEquipas(); if(S.tab==='est'){drawEvo();drawEst();} if(S.tab==='ext'){$('mExt').value=S.mExt;drawExtras();} if(S.tab==='vv')drawVV();
 }
 
@@ -415,7 +495,9 @@ function deltaHtml(k,cur,prev){
   if(cur==null||prev==null||prev===0)return '<span class="note">sem homólogo</span>';
   if(IND[k].pts){const d=cur-prev;const c=Math.abs(d)<0.05?'flat':d>0?'up':'down';
     return `<span class="delta ${c}">${d>0?'+':''}${nf1.format(d)} pts</span><span>vs ${S.ano-1}</span>`;}
-  if(IND[k].pp){const d=(cur-prev)*100;const c=Math.abs(d)<0.05?'flat':d>0?'up':'down';
+  if(IND[k].s2){const d=cur-prev;const c=Math.abs(d)<0.005?'flat':d>0?'up':'down';
+    return `<span class="delta ${c}">${d>0?'+':''}${nf2.format(d)}</span><span>vs ${S.ano-1}</span>`;}
+  if(IND[k].pp){const d=(cur-prev)*100;const c=Math.abs(d)<0.05?'flat':(d>0)!==!!IND[k].inv?'up':'down';
     return `<span class="delta ${c}">${d>0?'+':''}${nf1.format(d)} p.p.</span><span>vs ${S.ano-1}</span>`;}
   const d=cur/prev-1, inv=k==='danos'; const c=Math.abs(d)<0.0005?'flat':((d>0)!==inv?'up':'down');
   return `<span class="delta ${c}">${d>0?'+':''}${nf1.format(d*100)} %</span><span>vs ${S.ano-1}</span>`;
@@ -434,6 +516,9 @@ function drawKPI(){
       const det = k==='gg'&&cur.gg_est&&cur.gg_est.length ? `<span>${cur.gg_est.length>1?cur.gg_est.map(e=>e[0]+' '+e[1].toFixed(1).replace('.',',')).join(' · ')+' · ':''}${num(n)} reviews${cur.gg_ref?' · leitura '+MESC[cur.gg_ref%100-1]+'/'+Math.floor(cur.gg_ref/100):''}</span>` : `<span>${num(n)} reviews</span>`;
       extra = v==null?'<span class="note">sem avaliações</span>':
         `<span class="delta ${v>=IND[k].meta?'up':'down'}">${v>=IND[k].meta?'✓ meta':'✗ abaixo da meta'} ${IND[k].meta.toString().replace('.',',')}</span>${det}`;
+    } else if(IND[k].s2&&IND[k].meta){
+      extra = v==null?'<span class="note">sem avaliações</span>':
+        `<span class="delta ${v>=IND[k].meta?'up':'down'}">${v>=IND[k].meta?'✓ meta':'✗ abaixo da meta'} ${nf1.format(IND[k].meta)}</span>${prev[k]!=null?deltaHtml(k,v,prev[k]):''}<span>${num(cur[IND[k].n])} ${IND[k].u}</span>`;
     } else if(k==='ativos'){ extra=`<span>abertos no período e ainda em aluguer · ${num(cur.abertos_fech)} já fechados</span>`;
     } else extra=deltaHtml(k,v,prev[k])+(k==='nps'?`<span>${num(cur.nps_n)} respostas</span>`:'');
     h+=`<div class="kpi${k==='turnover'||k==='irpd'?' hl':''}"><span class="l">${IND[k].l}</span><span class="v">${IND[k].f(v)}</span><span class="d">${extra}</span></div>`;
@@ -442,7 +527,10 @@ function drawKPI(){
   $('kpis').innerHTML=h;
   const estTxt=S.est<0?'Portugal (3 estações)':EST[S.est].nome+' · '+EST[S.est].cod;
   const perTxt=S.mes>0?`${MESES[S.mes-1]} ${S.ano}`:`Jan–${MESC[meses.length-1]} ${S.ano}`;
-  $('ctx').innerHTML=`<span class="chip">${perTxt}</span><span class="chip">${estTxt}</span>${S.col>=0?`<span class="chip">${COL[S.col]}</span>`:''}<span>comparado com ${S.mes>0?MESES[S.mes-1]:'o mesmo período de'} ${S.ano-1}</span>`;
+  const temP=P&&S.ano===P.y&&meses.includes(P.m), intv=temP?`1–${P.dia} de ${MESES[P.m-1].toLowerCase()}`:'';
+  const cmpTxt=temP?(usaHom()?`comparado com o mesmo período de ${S.ano-1} (${intv} nos dois anos)`:`comparado com ${S.ano-1}; ${MESES[P.m-1].toLowerCase()} de ${S.ano-1} completo, sem homólogo do intervalo`)
+    :`comparado com ${S.mes>0?MESES[S.mes-1]:'o mesmo período de'} ${S.ano-1}`;
+  $('ctx').innerHTML=`<span class="chip">${perTxt}</span>${temP?`<span class="chip" style="color:var(--warn);border-color:var(--warn);background:transparent">${MESES[P.m-1]} parcial · ${intv}</span>`:''}<span class="chip">${estTxt}</span>${S.col>=0?`<span class="chip">${COL[S.col]}</span>`:''}<span>${cmpTxt}</span>`;
 }
 
 /* ---------- gráficos ---------- */
@@ -560,10 +648,12 @@ function drawColEvo(){
 }
 
 /* ---------- extras ---------- */
-const PROD_NOMES={FCI:'Full Cover (pacote)',CBORD:'Circulação fora de Portugal',RAP:'Assistência adicional',FDW:'Cobertura de danos',UPGR:'Upgrade',PPW:'Lavagem pré-paga',WUG:'Vidros e pneus',BOO:'Cadeira / booster',ADD:'Condutor adicional',GPS:'GPS',CDW:'CDW',RAPOR:'Assistência (PT)',RAESP:'Assistência (ES)',ADBLU:'AdBlue',BBS:'Babyseat',CBS:'Child seat'};
+const PROD_NOMES=Object.assign({},PROD_NOMES_DEF,D.prodNomes||{});
+const SO_GLOBAL=EXTRAS_SO_GLOBAL;
 function somaProd({ano,meses,est,col}){
   const ms=new Set(meses), by={};
-  for(const r of D.prod){ if(r[0]!==ano||!ms.has(r[1]))continue; if(est>=0&&r[2]!==est)continue; if(col>=0&&r[3]!==col)continue;
+  for(const r of PR()){ if(r[0]!==ano||!ms.has(r[1]))continue; if(est>=0&&r[2]!==est)continue; if(col>=0&&r[3]!==col)continue;
+    if(col>=0&&SO_GLOBAL.has(r[4]))continue; // só contam nos totais de estação/Portugal
     const o=by[r[4]]||(by[r[4]]={n:0,rev:0}); o.n+=r[5]; o.rev+=r[6]; }
   return by;
 }
@@ -600,18 +690,19 @@ function drawExtras(){
   for(const r of D.factos){ if(r[F.ano]!==S.ano||!ms.has(r[F.mes]))continue; if(S.est>=0&&r[F.est]!==S.est)continue;
     const c=r[F.colab]; if(SIS.has(COL[c]))continue;
     const o=by.get(c)||{c,abertos:0,c_venda:0,r_extras:0,dias:0,est:new Map()};
-    o.abertos+=r[F.abertos]; o.c_venda+=r[F.c_venda]; o.r_extras+=r[F.r_extras]; o.dias+=r[F.dias_abertos];
+    o.abertos+=r[F.abertos]; o.c_venda+=r[F.c_venda_col]; o.r_extras+=r[F.r_extras_col]; o.dias+=r[F.dias_abertos];
     o.est.set(r[F.est],(o.est.get(r[F.est])||0)+r[F.abertos]); by.set(c,o); }
   const L=[...by.values()].filter(o=>o.abertos>=30).map(o=>({...o,pen:div(o.c_venda,o.abertos),ext_ctr:div(o.r_extras,o.abertos),ext_dia:div(o.r_extras,o.dias),r_extras:o.r_extras,e0:[...o.est.entries()].sort((x,y)=>y[1]-x[1])[0][0]}));
   const rk=k==='r_extras'?'r_extras':k; L.sort((x,y)=>(y[rk]??-1)-(x[rk]??-1));
   const stC=[css('--st-1'),css('--st-2'),css('--st-3')];
   $('lgExtRank').innerHTML=EST.map((e,i)=>`<span><i class="sw bar" style="background:${stC[i]}"></i>${e.nome}</span>`).join('');
-  $('extRankNote').textContent=`Colaboradores com pelo menos 30 contratos abertos no período, ordenados por ${IND[rk].l.toLowerCase()}. Referência: ${fmt(cur[rk])}.`;
+  const refInd=soma({ano:S.ano,meses,est:S.est,col:-1,ind:true});
+  $('extRankNote').textContent=`Colaboradores com pelo menos 30 contratos abertos no período, ordenados por ${IND[rk].l.toLowerCase()}. Sem ${[...SO_GLOBAL].join(', ')} (só contam nos totais). Referência ${S.est<0?'Portugal':EST[S.est].nome}, nas mesmas condições: ${fmt(refInd[rk])}.`;
   $('extRankBox').style.height=Math.max(160,L.length*24+40)+'px';
   const o=baseOpts(IND[rk].f); o.indexAxis='y'; o.interaction={mode:'nearest',axis:'y',intersect:false};
   o.scales={x:{...o.scales.y,position:'top'},y:{grid:{display:false},border:{color:css('--axis')},ticks:{color:css('--ink-2'),font:{family:"'IBM Plex Sans',system-ui,'Segoe UI',sans-serif",size:12},autoSkip:false}}};
   o.plugins.tooltip.callbacks.afterLabel=c=>{const r=L[c.dataIndex];return ` ${num(r.c_venda)} vendas em ${num(r.abertos)} contratos`;};
-  const ref=cur[rk];
+  const ref=refInd[rk];
   const refPlugin={id:'ref2',afterDatasetsDraw(ch){ if(ref==null)return; const x=ch.scales.x.getPixelForValue(ref),{top,bottom}=ch.chartArea,cx=ch.ctx;
     cx.save();cx.strokeStyle=css('--ink-2');cx.setLineDash([3,3]);cx.beginPath();cx.moveTo(x,top);cx.lineTo(x,bottom);cx.stroke();cx.restore();}};
   mk('cExtRank',{type:'bar',data:{labels:L.map(r=>COL[r.c]),datasets:[{label:IND[rk].l,data:L.map(r=>r[rk]),backgroundColor:L.map(r=>stC[r.e0]),borderRadius:4,borderSkipped:'start',barThickness:14}]},options:o,plugins:[refPlugin]});
@@ -623,7 +714,7 @@ function drawExtras(){
   $('tblProd').tBodies[0].innerHTML=rows.map(([code,v])=>{
     const pen=div(v.n,cur.abertos), pp=PP[code]?div(PP[code].n,prev.abertos):null;
     const d=pen!=null&&pp!=null?(pen-pp)*100:null;
-    return `<tr><td class="name">${code}</td><td>${PROD_NOMES[code]||''}</td><td>${num(v.n)}</td><td><b>${pct(pen)}</b> ${d==null?'':`<span class="delta ${d>=0?'up':'down'}">${d>=0?'+':''}${nf1.format(d)} p.p.</span>`}</td>
+    return `<tr><td class="name">${code}</td><td>${PROD_NOMES[code]||''}${SO_GLOBAL.has(code)?' <span class="note" title="Conta nos totais de estação e Portugal; fica fora da análise por colaborador">· só totais</span>':''}</td><td>${num(v.n)}</td><td><b>${pct(pen)}</b> ${d==null?'':`<span class="delta ${d>=0?'up':'down'}">${d>=0?'+':''}${nf1.format(d)} p.p.</span>`}</td>
       <td><span class="bar-cell"><span class="minibar" style="width:${Math.round(v.rev/(rows[0][1].rev||1)*60)}px"></span>${eur(v.rev)}</span></td><td>${eur2(div(v.rev,cur.dias_abertos))}</td><td>${pct(div(v.rev,tot))}</td></tr>`;}).join('')
     || `<tr><td colspan="7" style="text-align:left">Sem vendas de extras neste período.</td></tr>`;
 }
@@ -659,6 +750,84 @@ function drawVV(){
 }
 $('mVv').onchange=e=>{S.mVv=e.target.value;drawVV();};
 
+/* ---------- avaliações ---------- */
+const TEMAS_PT={'Staff service':'Atendimento','Car condition':'Estado da viatura','Expected car':'Viatura esperada','Pick-up speed':'Rapidez no levantamento',
+  'Drop-off speed':'Rapidez na devolução','Car cleanliness':'Limpeza da viatura','Communication':'Comunicação','Desk location':'Localização do balcão',
+  'Insurance at desk':'Seguros ao balcão','Deposit return':'Devolução da caução','Unexpected costs':'Custos inesperados'};
+const CRIT_PT=['Conforto','Limpeza','Levantamento','Devolução','Indicações p/ balcão','Atendimento','Qualidade/preço','Voltaria a alugar','Nota global','Avaliações'];
+function drawAv(){
+  const meses=mesesDoPeriodo(S.ano,S.mes), AC=D.avCfg||{};
+  const cur=soma({ano:S.ano,meses,est:S.est,col:-1}), prev=soma({ano:S.ano-1,meses,est:S.est,col:-1});
+  $('avNote').textContent=(S.col>=0?'Sunny Cars, Rentalcars e Google não se ligam ao colaborador: este separador mostra '+(S.est<0?'Portugal':EST[S.est].nome)+'. O NPS por colaborador está em Equipas. ':'')
+    +(AC.at?`Ficheiros de avaliação carregados a ${AC.at.split('-').reverse().join('/')}. `:'')+'Sunny Cars: avaliações de julho a setembro de 2026.';
+  const meta=(k,v)=>v==null?'<span class="note">sem avaliações no período</span>':`<span class="delta ${v>=IND[k].meta?'up':'down'}">${v>=IND[k].meta?'✓ meta':'✗ abaixo da meta'} ${nf1.format(IND[k].meta)}</span>`;
+  const dl=(k)=>cur[k]!=null&&prev[k]!=null?deltaHtml(k,cur[k],prev[k]):'';
+  const card=(l,v,d,hl)=>`<div class="kpi${hl?' hl':''}"><span class="l">${l}</span><span class="v">${v}</span><span class="d">${d}</span></div>`;
+  $('avKpis').innerHTML=
+    card(IND.rep.l,`${IND.rep.f(cur.rep)}<small>/5</small>`,meta('rep',cur.rep)+dl('rep')+`<span>${num(cur.rep_n)} avaliações · Sunny, Rentalcars e Verdict</span>`,true)
+   +card(IND.sc.l,`${IND.sc.f(cur.sc)}<small>/5</small>`,meta('sc',cur.sc)+(cur.sc!=null?`<span>${num(cur.scn)} avaliações</span>`:''))
+   +card('Sunny Cars · viatura / espera / atendimento',cur.sc==null?'—':`${sc(cur.sc_v)} <small>/ ${sc(cur.sc_e)} / ${sc(cur.sc_a)}</small>`,cur.sc==null?'<span class="note">sem avaliações no período</span>':`<span>nota mais baixa: ${[['viatura',cur.sc_v],['espera',cur.sc_e],['atendimento',cur.sc_a]].sort((a,b)=>a[1]-b[1])[0][0]}</span>`)
+   +card(IND.sc_recl.l,pct(cur.sc_recl),cur.sc==null?'<span class="note">sem avaliações no período</span>':`<span>${num(cur.sc_recl_n)} de ${num(cur.scn)} avaliações</span>`)
+   +card(IND.rc.l,`${IND.rc.f(cur.rc)}<small>/10</small>`,meta('rc',cur.rc)+dl('rc')+(cur.rc!=null?`<span>${num(cur.rcn)} avaliações</span>`:''))
+   +card(IND.nps.l,IND.nps.f(cur.nps),dl('nps')+`<span>${num(cur.nps_n)} respostas</span>`)
+   +card(IND.exp.l,IND.exp.f(cur.exp),dl('exp')+(cur.exp!=null?`<span>${sc(cur.exp5)} na escala 0–5</span>`:''))
+   +card(IND.gg.l,`${IND.gg.f(cur.gg)}<small>/5</small>`,cur.gg==null?'<span class="note">sem leitura</span>':meta('gg',cur.gg)+`<span>${num(cur.ggn)} reviews (acumulado)</span>`);
+
+  // quadro por estação
+  const R=EST.map((e,i)=>[e.nome,i,soma({ano:S.ano,meses,est:i,col:-1})]).concat([['Portugal',-1,soma({ano:S.ano,meses,est:-1,col:-1})]]);
+  const cls=(v,m)=>v==null?'':v>=m?' class="ok"':' class="ko"';
+  $('tblAv').tHead.innerHTML='<tr><th>Estação</th><th>Nota global</th><th>Sunny Cars</th><th>Aval.</th><th>Viatura</th><th>Espera</th><th>Atendim.</th><th>Reclam.</th><th>Rentalcars</th><th>Aval.</th><th>NPS</th><th>Experiência</th><th>Google</th></tr>';
+  $('tblAv').tBodies[0].innerHTML=R.map(([n,i,o])=>`<tr class="${i===S.est||(i<0&&S.est<0)?'sel':''}"><td class="name">${n}</td>
+    <td${cls(o.rep,4.5)}><b>${sc(o.rep)}</b></td><td${cls(o.sc,4.5)}>${sc(o.sc)}</td><td>${num(o.scn)}</td><td${cls(o.sc_v,4.5)}>${sc(o.sc_v)}</td><td${cls(o.sc_e,4.5)}>${sc(o.sc_e)}</td><td${cls(o.sc_a,4.5)}>${sc(o.sc_a)}</td>
+    <td>${o.sc==null?'—':pct(o.sc_recl)}</td><td${cls(o.rc,9)}>${IND.rc.f(o.rc)}</td><td>${num(o.rcn)}</td><td>${IND.nps.f(o.nps)}</td><td>${IND.exp.f(o.exp)}</td><td${cls(o.gg,4.5)}>${sc(o.gg)}</td></tr>`).join('');
+  $('avTblNote').textContent='Verde = na meta (4,5 em 5; 9,0 no Rentalcars); vermelho = abaixo.';
+
+  // evolução mensal
+  const k=S.mAv, fmt=IND[k].f, a=[], b=[];
+  for(let m=1;m<=12;m++){ const x=soma({ano:S.ano,meses:[m],est:S.est,col:-1}), y=soma({ano:S.ano-1,meses:[m],est:S.est,col:-1});
+    a.push(!(S.ano===ultimo[0]&&m>ultimo[1])?x[k]:null); b.push(y[k]); }
+  const acc=css('--accent'),pv=css('--prev');
+  $('tAvEvo').textContent=`${IND[k].l} · mensal`;
+  $('lgAvEvo').innerHTML=`<span><i class="sw" style="background:${acc}"></i>${S.ano}</span><span><i class="sw" style="background:${pv}"></i>${S.ano-1}</span>`+(IND[k].meta?`<span><i class="sw" style="background:none;border-top:2px dashed var(--warn);height:0"></i>Meta ${nf1.format(IND[k].meta)}</span>`:'');
+  const oE=baseOpts(fmt); if(IND[k].s2){oE.scales.y.beginAtZero=false;}
+  const metaPl=(m)=>({id:'meta'+k,afterDatasetsDraw(ch){ if(m==null)return; const y=ch.scales.y.getPixelForValue(m),{left,right,top,bottom}=ch.chartArea; if(y<top||y>bottom)return; const cx=ch.ctx;
+    cx.save();cx.strokeStyle=css('--warn');cx.setLineDash([4,3]);cx.lineWidth=1.5;cx.beginPath();cx.moveTo(left,y);cx.lineTo(right,y);cx.stroke();cx.restore();}});
+  mk('cAvEvo',{type:'line',data:{labels:MESC,datasets:[
+    {label:String(S.ano),data:a,borderColor:acc,backgroundColor:acc,borderWidth:2,pointRadius:3,tension:.25,spanGaps:true},
+    {label:String(S.ano-1),data:b,borderColor:pv,backgroundColor:pv,borderWidth:2,borderDash:[4,3],pointRadius:2,tension:.25,spanGaps:true}]},options:oE,plugins:[metaPl(IND[k].meta)]});
+
+  // fontes por estação (escala 0–5, gráfico de pontos)
+  const E3=EST.map((_,i)=>soma({ano:S.ano,meses,est:i,col:-1}));
+  const F5=[['Sunny Cars',o=>o.sc,css('--st-1')],['Rentalcars',o=>o.rc!=null?o.rc/2:null,css('--st-2')],['Verdict Experiência',o=>o.exp5,css('--st-3')],['Google',o=>o.gg,css('--ink-2')]];
+  $('lgAvEst').innerHTML=F5.map(([n,,c])=>`<span><i class="sw bar" style="background:${c};border-radius:50%"></i>${n}</span>`).join('')+`<span><i class="sw" style="background:none;border-top:2px dashed var(--warn);height:0"></i>Meta 4,5</span>`;
+  const oS=baseOpts(sc); oS.scales.y.beginAtZero=false; oS.scales.y.suggestedMin=3.5; oS.scales.y.suggestedMax=5; oS.interaction={mode:'index',intersect:false};
+  mk('cAvEst',{type:'line',data:{labels:EST.map(e=>e.nome),datasets:F5.map(([n,g,c])=>({label:n,data:E3.map(g),borderColor:c,backgroundColor:c,showLine:false,pointRadius:7,pointHoverRadius:9,pointBorderColor:css('--surface'),pointBorderWidth:2}))},
+    options:oS,plugins:[metaPl(4.5)]});
+
+  // temas Rentalcars
+  const T=AC.rc_temas||{}, cods=S.est<0?EST.map(e=>e.cod):[EST[S.est].cod], pos={}, neg={};
+  for(const c of cods){ const t=T[c]||{}; for(const [x,v] of Object.entries(t.p||{})) pos[x]=(pos[x]||0)+v; for(const [x,v] of Object.entries(t.n||{})) neg[x]=(neg[x]||0)+v; }
+  const temas=[...new Set([...Object.keys(pos),...Object.keys(neg)])].sort((x,y)=>(neg[y]||0)-(neg[x]||0)||(pos[y]||0)-(pos[x]||0));
+  $('avTemasNote').textContent=temas.length?`${S.est<0?'Lisboa, Porto e Faro':EST[S.est].nome} · nº de avaliações que referem o tema · ficheiro de ${AC.at?AC.at.split('-').reverse().join('/'):'—'}`:'Sem temas carregados.';
+  $('lgAvTemas').innerHTML=`<span><i class="sw bar" style="background:${css('--bad')}"></i>Negativo</span><span><i class="sw bar" style="background:${css('--good')}"></i>Positivo</span>`;
+  $('avTemasBox').style.height=Math.max(160,temas.length*30+40)+'px';
+  const oT=baseOpts(num); oT.indexAxis='y'; oT.interaction={mode:'index',axis:'y',intersect:false};
+  oT.scales={x:{...oT.scales.y,position:'top'},y:{grid:{display:false},border:{color:css('--axis')},ticks:{color:css('--ink-2'),font:{family:"'IBM Plex Sans',system-ui,'Segoe UI',sans-serif",size:12},autoSkip:false}}};
+  mk('cAvTemas',{type:'bar',data:{labels:temas.map(t=>TEMAS_PT[t]||t),datasets:[
+    {label:'Negativo',data:temas.map(t=>neg[t]||0),backgroundColor:css('--bad'),borderRadius:3,barThickness:9},
+    {label:'Positivo',data:temas.map(t=>pos[t]||0),backgroundColor:css('--good'),borderRadius:3,barThickness:9}]},options:oT});
+
+  // critérios Rentalcars
+  const C=AC.rc_crit||{};
+  $('tblRcCrit').tHead.innerHTML='<tr><th>Estação</th>'+CRIT_PT.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+  $('tblRcCrit').tBodies[0].innerHTML=[...EST.map(e=>[e.nome,C[e.cod]]),['Portugal',C.PT]].filter(r=>r[1]).map(([n,v])=>`<tr><td class="name">${n}</td>${v.map((x,j)=>j===v.length-1?`<td>${num(x)}</td>`:`<td${x>=9?' class="ok"':x<8?' class="ko"':''}>${nf1.format(x)}</td>`).join('')}</tr>`).join('')
+    ||`<tr><td colspan="${CRIT_PT.length+1}" style="text-align:left">Sem critérios carregados.</td></tr>`;
+  // outras localizações da rede
+  $('tblRede').tBodies[0].innerHTML=(AC.rede||[]).map(([l,f,n,v,e])=>`<tr><td class="name">${l}</td><td>${f}</td><td>${num(n)}</td><td>${e===10?nf1.format(v)+' /10':nf2.format(v)+' /5'}</td><td>${nf2.format(e===10?v/2:v)}</td></tr>`).join('')
+    ||'<tr><td colspan="5" style="text-align:left">Sem dados.</td></tr>';
+}
+$('mAv').onchange=e=>{S.mAv=e.target.value;drawAv();};
+
 /* ---------- arranque ---------- */
 $('stamp').innerHTML=`Dados até <b>${D.meta.dados_ate.split('-').reverse().join('/')}</b><br>${nf0.format(D.meta.contratos)} contratos fechados · recolha ${D.meta.gerado_em||'—'}`;
 function render(){drawKPI();showTab();}
@@ -674,47 +843,65 @@ if(!window.__obs){window.__obs=1;
 /* Dados: coleção "meses" do db do painel (um documento por mês, AAAA-MM).
    f  = [estação, colaborador, turnover, net_rental, rental_days, abertos, fechados, danos, diretos, inc, c_venda, r_extras, dias_abertos]
    p  = [estação, colaborador, produto, contratos com venda, receita]
-   fl = [estação, frota média, dias em aluguer, taxa]       ocs = [estação, booking, nº, veredict/google, nº] */
+   cv = [estação, colaborador, contratos com venda sem YDF/RAPOR/SDF/BBS/CBS/BOO/GPS]
+   fl = [estação, frota média, dias em aluguer, taxa]       ocs = [estação, booking, nº, veredict/google, nº]
+   av = [estação, SC|RC, nº, nota, viatura, espera, atendimento, reclamações]   hom = {f,p,cv,fl,dia}: mesmo intervalo do ano anterior (mês parcial) */
 const EQUIPA_DEF=["Amaral Lívia", "Andrade Paloma", "Baptista Rafael", "Barros Jason", "Bilyk Julia", "Branco Francisco", "Carrasqueira Bruno", "Correia Bruno", "Costa Guilherme", "Esteves Tania", "Gahiva Bruno", "Lelo Diogo", "Lima Hipólito", "Lopes Daniela", "Lopes João", "Martins Rui", "Mattos Bruna", "Mendes Laura", "Mendinhascar Mendinhascar", "Mota Tânia", "Palma Guilherme", "Passos Jorge", "Paz Nicole", "Piccoli Guilherme", "Pimentel Tiago", "Pires Diana", "Rocha Lucas", "Rodrigues Fernanda", "Rodrigues Marisa", "Santos Renato", "Silva Johanna", "Silva Tiago", "Truta Goergia", "Varolo Amanda", "Vasconcelos Rui", "Ventura Fernanda", "Ximenes Luan"]; // equipa registada (Excel › Listas); pode ser substituída pelo documento config/equipa
-function construir(docs,equipa){
+const PROD_NOMES_DEF={"TMI": "Vehicle Rental", "MIL": "Additional Mileage", "DSC": "Rental Discount", "DEL": "Delivery Charge", "COL": "Collection Charge", "OOH": "Out of Hours Charge", "ONE": "One Way Rental Charge", "FUE": "Fuel Charge", "DMG": "Damages", "VAT": "Value Added Tax", "LCT": "Municipal Tax", "CDW": "Cobertura Danos Colisão/Collision Damage Waiver", "FDW": "FDW Danos e Perda/Full Damage Waiver", "TP": "Theft Protection", "ADD": "Taxa Condutor Adicional/Additional Driver", "YDF": "Tx. Condutor Jovem 19-23/Young Driver Charge 20-24", "WUG": "Cobertura Danos Vidros,e pneus/wheels,Underside an", "ADBLU": "Adblue refuel", "CBORD": "Tx. Circul.Fora PT: ES./Cross Border Fee PT: SP.", "BBS": "Cadeira de Bébé/Baby Seat", "CBS": "Cadeira de Criança/Child Safety Seat", "ENE": "Carregamento energia / Energy Charge", "ENEV": "Energy Card Miio", "TOLLS": "Portagens/Tolls (IVA 23%)", "TOLL6": "Portagens/Tolls (IVA 6%)", "BOO": "Cadeira de Criança/Toddler Safety Seat", "GPS": "GPS System (Tom Tom/Garmin)", "FCI": "Cobertura total / FULL Cover(WUG+FDW)", "USR": "Upgrade Charge", "VV": "Serviço Via Verde / eToll Service", "UPGR": "Upgrade", "SDF": "Tx.Condutor Sénior/Senior Charge", "TAC": "Identif. Condutor multa/ Ticket Charge", "DAC": "Taxa Sinistro / Damage admin.Charge", "HTD": "Entregas/Recolhas LXA", "RAP": "Roadside Assistance Plus", "RAPOR": "Roadside Assistance Fee Portugal", "RAESP": "Roadside Assistance Fee Spain", "TVC": "Multa de Trânsito /Traffic Violation charge", "PPW": "Pre-Paid Wash", "RDW": "RDW - Reduced Damage Waiver", "VV2": "Via Verde / eToll Service (admin FEE)", "NOCDW": "Without CDW (No Insurance Included)"}; // descrições do WheelSys (Additional Options & Insurances); podem ser substituídas pelo documento config/extras
+const EXTRAS_SO_GLOBAL=new Set(['YDF','RAPOR','SDF','BBS','CBS','BOO','GPS']); // contam nos totais, não na análise por colaborador (Nuno, 15/10/2026)
+function construir(docs,equipa,prodNomes,avCfg){
   const EST=[{cod:'LXAAPT',nome:'Lisboa'},{cod:'OPTAPT',nome:'Porto'},{cod:'FAOAPT',nome:'Faro'}];
   const ei=Object.fromEntries(EST.map((e,i)=>[e.cod,i]));
   const cset=new Set();
-  for(const d of docs.values()){ (d.f||[]).forEach(r=>cset.add(r[1])); (d.p||[]).forEach(r=>cset.add(r[1])); (d.ativ||[]).forEach(r=>cset.add(r[1])); }
-  const factos=[],prod=[],frota=[],ocs=[],ver=[],ativ=[],raMap=new Map(); let ate='',contratos=0,gerado='',temExtras=false; const extMeses=new Set();
+  for(const d of docs.values()){ for(const s of [d,d.hom||{}]){ (s.f||[]).forEach(r=>cset.add(r[1])); (s.p||[]).forEach(r=>cset.add(r[1])); } (d.ativ||[]).forEach(r=>cset.add(r[1])); }
+  const factos=[],prod=[],frota=[],ocs=[],ver=[],ativ=[],av=[],raMap=new Map(); let ate='',contratos=0,gerado='',temExtras=false,parcial=null; const extMeses=new Set();
   for(const d of docs.values()) if(d.ra&&d.ra.r) for(const [n,u] of d.ra.r) raMap.set(n,d.ra.u[u]);
   for(const c of raMap.values()) cset.add(c);
   const COL=[...cset].sort((a,b)=>a.localeCompare(b,'pt')); const ci=Object.fromEntries(COL.map((c,i)=>[c,i]));
+  // f/p/cv/fl de um mês (ou do homólogo de um mês parcial) → factos, produtos e frota
+  function carrega(src,y,m,dmE,out,principal){
+    // cv = [estação, colaborador, contratos com venda sem os extras só globais]; receita sem esses extras vem de p
+    const cv=Array.isArray(src.cv)?new Map(src.cv.map(r=>[r[0]+'|'+r[1],+r[2]||0])):null, soG=new Map();
+    for(const r of src.p||[]) if(EXTRAS_SO_GLOBAL.has(r[2])){const kk=r[0]+'|'+r[1]; soG.set(kk,(soG.get(kk)||0)+(+r[4]||0));}
+    for(const r of src.f||[]){ if(ei[r[0]]==null)continue; const v=r.slice(2,15).map(x=>+x||0); while(v.length<13)v.push(0);
+      const kk=r[0]+'|'+r[1]; out.factos.push([y,m,ei[r[0]],ci[r[1]],...v, cv?(cv.get(kk)||0):v[8], v[9]-(soG.get(kk)||0)]); if(principal) contratos+=+r[6]||0; }
+    for(const r of src.p||[]){ if(ei[r[0]]==null)continue; out.prod.push([y,m,ei[r[0]],ci[r[1]],r[2],+r[3]||0,+r[4]||0]); if(principal){temExtras=true; extMeses.add(y+'-'+m);} }
+    for(const r of src.fl||[]){ if(ei[r[0]]==null||!r[1])continue; out.frota.push([y,m,ei[r[0]],+r[1],+r[2]||0,r[1]*dmE,r[3]]); }
+  }
+  const OUT={factos,prod,frota}; let ultK=null;
   for(const [k,d] of [...docs.entries()].sort((a,b)=>a[0]<b[0]?-1:1)){
     const [y,m]=k.split('-').map(Number), dm=new Date(y,m,0).getDate();
-    for(const r of d.f||[]){ if(ei[r[0]]==null)continue; factos.push([y,m,ei[r[0]],ci[r[1]],...r.slice(2,15).map(v=>+v||0),...(r.length<15?new Array(15-Math.max(r.length,13)).fill(0):[])]); contratos+=+r[6]||0; }
-    for(const r of d.p||[]){ if(ei[r[0]]==null)continue; prod.push([y,m,ei[r[0]],ci[r[1]],r[2],+r[3]||0,+r[4]||0]); temExtras=true; extMeses.add(y+'-'+m); }
-    for(const r of d.fl||[]){ if(ei[r[0]]==null||!r[1])continue; frota.push([y,m,ei[r[0]],+r[1],+r[2]||0,r[1]*dm,r[3]]); }
+    const dd=d.ate&&!d.fechado?+String(d.ate).slice(8,10):dm, dmE=dd>0&&dd<dm?dd:dm; // mês parcial: frota divide pelos dias do intervalo
+    carrega(d,y,m,dmE,OUT,true);
     for(const r of d.ativ||[]){ if(ei[r[0]]==null)continue; ativ.push([y,m,ei[r[0]],ci[r[1]],+r[2]||0]); }
     for(const r of d.verR||[]){ if(ei[r[1]]==null)continue; const u=raMap.get(r[0]); ver.push([y,m,ei[r[1]],u==null?-1:ci[u],...r.slice(2,8)]); }
     for(const r of d.ocs||[]){ if(ei[r[0]]==null)continue; ocs.push([y,m,ei[r[0]],+r[1]||0,+r[2]||0,+r[3]||0,+r[4]||0]); }
-    if((d.f||[]).some(r=>r[4]>0)) ate=d.ate||`${k}-${String(dm).padStart(2,'0')}`;
+    // av = [estação, fonte SC|RC, nº avaliações, nota, viatura, espera, atendimento, reclamações]
+    for(const r of d.av||[]){ if(ei[r[0]]==null||!(+r[2]>0))continue; av.push([y,m,ei[r[0]],r[1],+r[2],+r[3],+r[4]||0,+r[5]||0,+r[6]||0,+r[7]||0]); }
+    if((d.f||[]).some(r=>r[4]>0)){ ate=d.ate||`${k}-${String(dm).padStart(2,'0')}`; ultK=k; parcial=dmE<dm?{y,m,dia:dmE}:null; }
     if(d.at&&d.at>gerado) gerado=d.at;
   }
+  let hom=null; const hd=ultK&&parcial?docs.get(ultK).hom:null;
+  if(hd&&Array.isArray(hd.f)){ const py=parcial.y-1, pm=parcial.m, fora=r=>!(r[0]===py&&r[1]===pm);
+    hom={factos:factos.filter(fora),prod:prod.filter(fora),frota:frota.filter(fora)}; carrega(hd,py,pm,+hd.dia||parcial.dia,hom,false); }
   return {meta:{dados_ate:ate,gerado_em:String(gerado).replace('T',' '),contratos},estacoes:EST,
     meses:['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
     colaboradores:COL,sistema:(()=>{const nz=x=>String(x).replace(/\s+/g,' ').trim().toLowerCase(); const E=new Set((equipa||EQUIPA_DEF).map(nz)); return COL.filter(c=>/^account system$/i.test(c)||c==='(sem colaborador)'||!E.has(nz(c)));})(),
-    campos:['ano','mes','est','colab','turnover','net_rental','rental_days','abertos','fechados','danos','diretos','inc','c_venda','r_extras','dias_abertos','vv','vv_ctr'],
-    factos,prod,frota,ocs,ver,ativ,temExtras,extMeses};
+    campos:['ano','mes','est','colab','turnover','net_rental','rental_days','abertos','fechados','danos','diretos','inc','c_venda','r_extras','dias_abertos','vv','vv_ctr','c_venda_col','r_extras_col'],
+    factos,prod,frota,ocs,ver,ativ,av,temExtras,extMeses,prodNomes:prodNomes||null,parcial,hom,avCfg:avCfg||null};
 }
 
 (async function(){
   const $=id=>document.getElementById(id);
   const msg=html=>{$('kpis').innerHTML=`<div class="kpi" style="grid-column:1/-1;padding:22px">${html}</div>`;};
-  const st=(t,c)=>{const el=$('impStatus');el.textContent=t;el.dataset.state=c||'';};
   msg('<span class="note">A carregar dados…</span>');
   let D;
   try{const r=await fetch('data/meses.json?v='+Date.now(),{cache:'no-store'}); if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json(); D=construir(new Map(Object.entries(j.meses)),j.equipa||null);}
+    const j=await r.json(); D=construir(new Map(Object.entries(j.meses)),j.equipa||null,j.extras_nomes||null,j.avaliacoes||null);}
   catch(e){msg('<b>Não foi possível ler os dados</b> <span class="note">('+(e.message||e)+').</span>');return;}
   if(!D.factos.length){msg('<b>Ainda sem dados.</b>');return;}
   try{app(D);}catch(e){msg('<b>Erro ao desenhar o painel.</b><span class="note">'+(e.message||e)+'</span>');}
 })();
 </script>
-
-
+</body>
+</html>
