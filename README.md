@@ -59,3 +59,9 @@ Mapeamento confirmado com o Base_Rentals: Check-out Date=datefrom, Check-in Date
 Turnover 484 943,12 € · Net Rental 312 707,35 € · Rental Days 15 552 · Abertos 1 915 · Fechados 1 897 · Danos 26 041,40 € · Incremental Sales 45 133,44 € · iRPD 2,90 €. Tudo coincide (com a regra antiga do Incremental Sales Report).
 Com a regra final de 14/10/2026: setembro/2026 Portugal = 86 054,40 €; Mattos Bruna = 9 193,81 € (confirmado pelo Nuno).
 Diferenças conhecidas do Excel: RNT-23624 está duplicado no Base_Rentals; a ocupação de Portugal no Excel (66,7 %) difere da recalculada (69,2 %), que segue o trabalho ISCTE.
+
+## Avaliação individual (decisões do Nuno, 12/11/2026)
+- Fica só no dashboard privado (dados de RH); o site público não a inclui.
+- Piloto com novembro de 2026: nota final = 70 % chefia + 30 % autoavaliação (Microsoft Forms "Autoavaliação mensal · ICONIQ"); avaliação de novembro lançada no início de dezembro.
+- Prémio de desempenho = 15 % × vendas ao balcão da estação × % Funcionário × nota final × (1 − penalização). A % Funcionário é atribuída por cada Branch Manager, de acordo com o desempenho comercial de cada colaborador; não é calculada pela quota de vendas. Sem % atribuída não há prémio calculado.
+- Equipa: a 11/11/2026 saíram Esteves Tania, Rodrigues Marisa e Santos Renato; a 12/11/2026 entrou Ferrão Lucas (Porto; estação fixa em config/equipa.est).
