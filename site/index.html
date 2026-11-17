@@ -129,6 +129,8 @@ td.ok{color:var(--good)} td.ko{color:var(--bad)} td.ok b,td.ko b{color:inherit}
 #tblAv th,#tblRcCrit th,#tblRede th{cursor:default}
 #tblAv th:nth-child(n+2),#tblAv td:nth-child(n+2),#tblRcCrit th:nth-child(n+2),#tblRcCrit td:nth-child(n+2),#tblRede th:nth-child(n+3),#tblRede td:nth-child(n+3){text-align:right}
 
+#tblVq tbody tr,#tblVqProd tbody tr,#tblVq th,#tblVqProd th{cursor:default}
+#tblVqProd th:nth-child(3),#tblVqProd td:nth-child(3){text-align:right}
 /* ---- extras por categoria, quadro de estações e avaliação individual ---- */
 .xbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
 .cat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}
@@ -225,6 +227,7 @@ table.ind tr.ed>td{white-space:normal}
       <div class="seg" role="tablist" id="tabs">
         <button role="tab" data-tab="est" aria-pressed="true">Estações</button>
         <button role="tab" data-tab="ext" aria-pressed="false">Extras por categoria</button>
+        <button role="tab" data-tab="vq" aria-pressed="false">Vendas · quadro mensal</button>
         <button role="tab" data-tab="vv" aria-pressed="false">Via Verde e danos</button>
         <button role="tab" data-tab="av" aria-pressed="false">Avaliações de clientes</button>
         <button role="tab" data-tab="eq" aria-pressed="false">Análise em detalhe</button>
@@ -254,6 +257,29 @@ table.ind tr.ed>td{white-space:normal}
     <div class="panel">
       <div class="ph"><h2>Quadro por estação</h2><span class="note" id="estTblNote"></span></div>
       <div class="tbl-wrap"><table id="tblEst" class="plain"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- VENDAS · QUADRO MENSAL (Excel IRPD) -->
+  <div class="tab-panel" id="tab-vq" hidden>
+    <div id="vqBox"></div>
+    <div id="vqMain" class="stack">
+      <div class="xbar">
+        <div class="fld"><label for="vqMes">Mês analisado</label><select id="vqMes"></select></div>
+        <div class="fld"><label>Loja</label><div class="seg" id="vqEst" role="group" aria-label="Loja"></div></div>
+      </div>
+      <section class="kpis" id="vqKpis" aria-label="Resumo por loja"></section>
+      <div class="grid2">
+        <div class="panel">
+          <div class="ph"><h2>Resultados por colaborador</h2><span class="note" id="vqRankNote"></span></div>
+          <div class="tbl-wrap"><table id="tblVq"><thead></thead><tbody></tbody></table></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><h2>Vendas por extra</h2><span class="note" id="vqProdNote"></span></div>
+          <div class="tbl-wrap"><table id="tblVqProd"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <p class="note" id="vqNote"></p>
     </div>
   </div>
 
@@ -397,6 +423,7 @@ table.ind tr.ed>td{white-space:normal}
     <div><b>Rentalcars.</b> Nota média das avaliações (escala 0–10) no mês da avaliação; Lisboa = Humberto Delgado Airport, Porto = Francisco Sá Carneiro Airport, Faro = Faro Airport. Critérios e temas vêm do ficheiro exportado (acumulado da ficha). Meta 9,0 (equivalente a 4,5 em 5).</div>
     <div><b>Nota global de avaliação.</b> Média ponderada pelo nº de avaliações, na escala 0–5, de Sunny Cars (nota tal como está), Rentalcars (nota ÷ 2) e Customer Verdict Experiência (÷ 20). Google fica de fora porque é uma nota acumulada da ficha, não do mês. Sem ligação ao colaborador: Sunny Cars e Rentalcars não trazem o nº de contrato WheelSys.</div>
     <div><b>Mês parcial.</b> Quando o último mês tem dados só até um dia (ex.: 1–15 de outubro), a comparação com o ano anterior usa o mesmo intervalo de dias desse mês, recolhido à parte do WheelSys. A frota média desse mês divide pelos dias do intervalo.</div>
+    <div><b>Vendas · quadro mensal.</b> Reproduz o Excel IRPD: Net Revenue do Extra Sales Report (List type Check-outs, “Sold by”, todos os utilizadores) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW, somado no mês da Check-in Date, para os colaboradores ativos da lista, cada um na sua loja. Atualizado todos os dias a partir do WheelSys: os check-outs do mês corrente e do mês anterior são relidos, por isso contratos prolongados, fechados mais cedo ou com estornos mudam o valor já registado. Difere das Extras Sales dos outros separadores, que usam a lista por Check-ins e a estação de check-out.</div>
     <div><b>Categorias de extras.</b> Seguros e coberturas: FCI, FDW, RDW, WUG e RAP. Upgrades e serviços: UPGR, CBORD, ADD e PPW. Por necessidade do cliente: BBS, CBS, BOO e GPS. Taxas e encargos: YDF, SDF e RAPOR. As duas primeiras são venda comercial e entram na análise por colaborador; as outras duas contam só nos totais de estação e Portugal. Numa categoria, a penetração soma as vendas dos seus produtos: um contrato com dois produtos da categoria conta duas vezes.</div>
   </footer>
 </div>
@@ -577,8 +604,10 @@ $('mRank').onchange=e=>{S.mRank=e.target.value;S.sort=e.target.value;S.dir=-1;dr
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;try{localStorage.setItem('iconiq-tab',S.tab)}catch(e){};showTab();});
 function showTab(){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===S.tab));
-  if(!['est','eq','ext','vv','av'].includes(S.tab))S.tab='est';
-  for(const t of ['est','eq','ext','vv','av'])$('tab-'+t).hidden=t!==S.tab;
+  if(!['est','eq','ext','vq','vv','av'].includes(S.tab))S.tab='est';
+  for(const t of ['est','eq','ext','vq','vv','av'])$('tab-'+t).hidden=t!==S.tab;
+  for(const id of ['fAno','fMes','fEst','fCol'])$(id).parentElement.hidden=S.tab==='vq'; // o quadro de vendas tem o seu próprio mês e loja
+  $('ctx').hidden=S.tab==='vq'; $('kpis').hidden=S.tab==='vq'; if(S.tab==='vq')drawVendas();
   if(S.tab==='av'){$('mAv').value=S.mAv;drawAv();}
   if(S.tab==='eq')drawEquipas(); if(S.tab==='est'){drawEvo();drawEst();drawEstTbl();} if(S.tab==='ext')drawExtras(); if(S.tab==='vv')drawVV();
 }
@@ -1035,6 +1064,66 @@ $('mAv').onchange=e=>{S.mAv=e.target.value;drawAv();};
 
 /* ---------- arranque ---------- */
 $('stamp').innerHTML=`Dados até <b>${D.meta.dados_ate.split('-').reverse().join('/')}</b><br>${nf0.format(D.meta.contratos)} contratos fechados · recolha ${D.meta.gerado_em||'—'}`;
+/* ---------- Vendas · quadro mensal (Excel IRPD) ----------
+   Coleção "vendas", um documento por mês de CHECK-OUT (AAAA-MM), vindo do Extra Sales Report (List type Check-outs, Sold by):
+   u = colaboradores, m = meses da Check-in Date, k = extras; a = "u.m.k.nº de linhas.cêntimos" separados por espaço; c = "u.m.nº de contratos".
+   O quadro soma o Net Revenue pelo mês da Check-in Date e atribui cada colaborador à loja da lista config/vendas. */
+function vqModelo(){
+  const V=window.__vd, docs=V&&V.docs; if(!docs||!docs.size)return null;
+  const nzk=x=>String(x).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+  const def=typeof VQ_DEF!=='undefined'?VQ_DEF:[];
+  const lista=(V.cfg&&Array.isArray(V.cfg.colab)?V.cfg.colab:def).map(r=>({nome:r[0],est:r[1],ativo:r[2]!==false}));
+  const by={}; let ate='',at='';
+  const cell=(ci,n)=>{const M=by[ci]||(by[ci]=new Map()); let o=M.get(n); if(!o){o={v:0,n:0,c:0,k:{}};M.set(n,o);} return o;};
+  for(const d of docs.values()){ if(!d||!Array.isArray(d.u)||!Array.isArray(d.m)||!Array.isArray(d.k)||typeof d.a!=='string')continue;
+    if(d.ate&&d.ate>ate)ate=d.ate; if(d.at&&d.at>at)at=d.at;
+    for(const t of d.a.split(' ')){ if(!t)continue; const p=t.split('.'), ci=d.m[+p[1]], n=d.u[+p[0]], code=d.k[+p[2]]; if(!ci||n==null||!code)continue;
+      const o=cell(ci,n), q=+p[3]||0, v=(+p[4]||0)/100; o.v+=v; o.n+=q; const y=o.k[code]||(o.k[code]=[0,0]); y[0]+=q; y[1]+=v; }
+    for(const t of String(d.c||'').split(' ')){ if(!t)continue; const p=t.split('.'), ci=d.m[+p[1]], n=d.u[+p[0]]; if(!ci||n==null)continue; cell(ci,n).c+=+p[2]||0; }
+  }
+  const meses=Object.keys(by).sort(); if(!meses.length)return null;
+  return {by,lista,nzk,ate,at,meses,de:[...docs.keys()].sort()[0]};
+}
+function drawVendas(){
+  const M=vqModelo();
+  if(!M){$('vqMain').hidden=true;$('vqBox').innerHTML='<div class="empty"><h3>Ainda sem dados de vendas</h3><div>Os dados chegam com a atualização diária do WheelSys (Extra Sales Report, Check-outs, “Sold by”).</div></div>';return;}
+  $('vqBox').innerHTML='';$('vqMain').hidden=false;
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const hoje=M.ate.slice(0,7);
+  if(!S.vqMes||!M.meses.includes(S.vqMes))S.vqMes=M.meses.includes(hoje)?hoje:M.meses[M.meses.length-1];
+  if(S.vqEst==null)S.vqEst=-1;
+  const lab=k=>MESES[+k.slice(5)-1]+' '+k.slice(0,4), dmy=d=>d?d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4):'—';
+  opts($('vqMes'),M.meses.map(k=>[k,lab(k)]),S.vqMes);
+  $('vqMes').onchange=e=>{S.vqMes=e.target.value;drawVendas();};
+  $('vqEst').innerHTML=[[-1,'Portugal']].concat(EST.map((e,i)=>[i,e.nome])).map(([v,t])=>`<button data-e="${v}" aria-pressed="${v===S.vqEst}">${t}</button>`).join('');
+  $('vqEst').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.vqEst=+b.dataset.e;drawVendas();});
+  // vendas do mês analisado por colaborador (nomes comparados sem acentos, maiúsculas ou espaços a mais)
+  const cn=new Map();
+  for(const [n,o] of (M.by[S.vqMes]||new Map())){ const k=M.nzk(n), t=cn.get(k)||{nome:n,v:0,n:0,c:0,k:{}}; t.v+=o.v; t.n+=o.n; t.c+=o.c;
+    for(const [code,x] of Object.entries(o.k)){const y=t.k[code]||(t.k[code]=[0,0]); y[0]+=x[0]; y[1]+=x[1];} cn.set(k,t); }
+  const ei=Object.fromEntries(EST.map((e,i)=>[e.cod,i]));
+  const ativos=M.lista.filter(o=>o.ativo&&ei[o.est]!=null), usados=new Set(ativos.map(o=>M.nzk(o.nome)));
+  const rows=ativos.map(o=>{const d=cn.get(M.nzk(o.nome))||{v:0,n:0,c:0,k:{}}; return {nome:o.nome,est:ei[o.est],v:d.v,n:d.n,c:d.c,k:d.k};});
+  let fora=0; const foraN=[]; for(const [k,o] of cn) if(!usados.has(k)&&Math.abs(o.v)>0.004){fora+=o.v;foraN.push(o.nome);}
+  const tot=EST.map((e,i)=>rows.filter(r=>r.est===i).reduce((s,r)=>({v:s.v+r.v,c:s.c+r.c,p:s.p+1}),{v:0,c:0,p:0}));
+  const pt=tot.reduce((s,t)=>({v:s.v+t.v,c:s.c+t.c,p:s.p+t.p}),{v:0,c:0,p:0});
+  const card=(l,t,hl,sh)=>`<div class="kpi${hl?' hl':''}"><span class="l">${l}</span><span class="v">${eur2(t.v)}</span><span class="d"><span>${num(t.c)} contratos · ${num(t.p)} colaboradores${sh!=null?' · '+pct(sh)+' de Portugal':''}</span></span></div>`;
+  $('vqKpis').innerHTML=card('Portugal',pt,true,null)+EST.map((e,i)=>card(e.nome+' · '+e.cod,tot[i],false,div(tot[i].v,pt.v))).join('');
+  const vis=rows.filter(r=>S.vqEst<0||r.est===S.vqEst).sort((a,b)=>b.v-a.v||a.nome.localeCompare(b.nome,'pt'));
+  const mx=Math.max(1,...vis.map(r=>r.v)), tv=vis.reduce((s,r)=>s+r.v,0), tc=vis.reduce((s,r)=>s+r.c,0);
+  const tag=i=>`<span class="est-tag"><i style="background:var(--st-${i+1})"></i>${EST[i].nome}</span>`;
+  $('tblVq').querySelector('thead').innerHTML='<tr><th>#</th><th>Colaborador</th><th>Loja</th><th>Vendas</th><th>Contratos</th><th>€ / contrato</th><th>%</th></tr>';
+  $('tblVq').querySelector('tbody').innerHTML=vis.map((r,i)=>`<tr><td class="pos">${i+1}</td><td class="name">${esc(r.nome)}</td><td>${tag(r.est)}</td><td><div class="bar-cell"><span class="minibar" style="width:${Math.max(0,Math.round(r.v/mx*36))}px"></span><b>${eur2(r.v)}</b></div></td><td>${num(r.c)}</td><td>${r.c?eur2(r.v/r.c):'—'}</td><td>${pct(div(r.v,tv))}</td></tr>`).join('')
+    +`<tr><td class="pos"></td><td class="name">Total</td><td>${S.vqEst<0?'Portugal':tag(S.vqEst)}</td><td><b>${eur2(tv)}</b></td><td>${num(tc)}</td><td>${tc?eur2(tv/tc):'—'}</td><td></td></tr>`;
+  $('vqRankNote').textContent=`${lab(S.vqMes)} · ${vis.length} colaboradores`;
+  const pk={}; for(const r of vis) for(const [code,x] of Object.entries(r.k)){const y=pk[code]||(pk[code]=[0,0]); y[0]+=x[0]; y[1]+=x[1];}
+  $('tblVqProd').querySelector('thead').innerHTML='<tr><th>Extra</th><th>Descrição</th><th>Nº</th><th>Vendas</th><th>%</th></tr>';
+  $('tblVqProd').querySelector('tbody').innerHTML=Object.entries(pk).sort((a,b)=>b[1][1]-a[1][1]).map(([code,x])=>`<tr><td class="name">${esc(code)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${esc(PROD_NOMES[code]||'')}">${esc(PROD_NOMES[code]||'')}</td><td>${num(x[0])}</td><td><b>${eur2(x[1])}</b></td><td>${pct(div(x[1],tv))}</td></tr>`).join('')||'<tr><td colspan="5">Sem vendas neste mês.</td></tr>';
+  $('vqProdNote').textContent=S.vqEst<0?'Portugal':EST[S.vqEst].nome;
+  $('vqNote').innerHTML=`<b>Vendas</b> = Net Revenue do Extra Sales Report do WheelSys (List type Check-outs, “Sold by”) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW, somado no mês da Check-in Date (a prevista, enquanto o contrato está aberto). Cada colaborador conta na sua loja. Check-outs de ${dmy(M.de+'-01')} a ${dmy(M.ate)}${M.at?' · atualizado em '+dmy(M.at.slice(0,10))+' às '+M.at.slice(11,16):''}.`
+    +(foraN.length?` Fora do quadro: ${eur2(fora)} vendidos por utilizadores que não estão na lista de colaboradores (${foraN.sort().map(esc).join(', ')}).`:'');
+}
+
 function render(){drawKPI();showTab();}
 window.__render=render;
 render();
@@ -1054,6 +1143,8 @@ if(!window.__obs){window.__obs=1;
 const EQUIPA_DEF=["Amaral Lívia", "Andrade Paloma", "Baptista Rafael", "Barros Jason", "Bilyk Julia", "Branco Francisco", "Carrasqueira Bruno", "Correia Bruno", "Costa Guilherme", "Ferrão Lucas", "Gahiva Bruno", "Lelo Diogo", "Lima Hipólito", "Lopes Daniela", "Lopes João", "Martins Rui", "Mattos Bruna", "Mendes Laura", "Mendinhascar Mendinhascar", "Mota Tânia", "Palma Guilherme", "Passos Jorge", "Paz Nicole", "Piccoli Guilherme", "Pimentel Tiago", "Pires Diana", "Rocha Lucas", "Rodrigues Fernanda", "Silva Johanna", "Silva Tiago", "Truta Goergia", "Varolo Amanda", "Vasconcelos Rui", "Ventura Fernanda", "Ximenes Luan"]; // equipa registada (Excel › Listas); pode ser substituída pelo documento config/equipa
 const PROD_NOMES_DEF={"TMI": "Vehicle Rental", "MIL": "Additional Mileage", "DSC": "Rental Discount", "DEL": "Delivery Charge", "COL": "Collection Charge", "OOH": "Out of Hours Charge", "ONE": "One Way Rental Charge", "FUE": "Fuel Charge", "DMG": "Damages", "VAT": "Value Added Tax", "LCT": "Municipal Tax", "CDW": "Cobertura Danos Colisão/Collision Damage Waiver", "FDW": "FDW Danos e Perda/Full Damage Waiver", "TP": "Theft Protection", "ADD": "Taxa Condutor Adicional/Additional Driver", "YDF": "Tx. Condutor Jovem 19-23/Young Driver Charge 20-24", "WUG": "Cobertura Danos Vidros,e pneus/wheels,Underside an", "ADBLU": "Adblue refuel", "CBORD": "Tx. Circul.Fora PT: ES./Cross Border Fee PT: SP.", "BBS": "Cadeira de Bébé/Baby Seat", "CBS": "Cadeira de Criança/Child Safety Seat", "ENE": "Carregamento energia / Energy Charge", "ENEV": "Energy Card Miio", "TOLLS": "Portagens/Tolls (IVA 23%)", "TOLL6": "Portagens/Tolls (IVA 6%)", "BOO": "Cadeira de Criança/Toddler Safety Seat", "GPS": "GPS System (Tom Tom/Garmin)", "FCI": "Cobertura total / FULL Cover(WUG+FDW)", "USR": "Upgrade Charge", "VV": "Serviço Via Verde / eToll Service", "UPGR": "Upgrade", "SDF": "Tx.Condutor Sénior/Senior Charge", "TAC": "Identif. Condutor multa/ Ticket Charge", "DAC": "Taxa Sinistro / Damage admin.Charge", "HTD": "Entregas/Recolhas LXA", "RAP": "Roadside Assistance Plus", "RAPOR": "Roadside Assistance Fee Portugal", "RAESP": "Roadside Assistance Fee Spain", "TVC": "Multa de Trânsito /Traffic Violation charge", "PPW": "Pre-Paid Wash", "RDW": "RDW - Reduced Damage Waiver", "VV2": "Via Verde / eToll Service (admin FEE)", "NOCDW": "Without CDW (No Insurance Included)"}; // descrições do WheelSys (Additional Options & Insurances); podem ser substituídas pelo documento config/extras
 const EXTRAS_SO_GLOBAL=new Set(['YDF','RAPOR','SDF','BBS','CBS','BOO','GPS']); // contam nos totais, não na análise por colaborador (Nuno, 15/10/2026)
+// Vendas · quadro mensal: [colaborador, loja, ativo] (Excel IRPD › COLABORADORES); pode ser substituída pelo documento config/vendas = {colab:[...]}
+const VQ_DEF=[["Amaral Lívia","LXAAPT",true],["Carrasqueira Bruno","FAOAPT",true],["Lelo Diogo","FAOAPT",true],["Martins Rui","LXAAPT",true],["Mattos Bruna","OPTAPT",true],["Mendes Laura","LXAAPT",true],["Mota Tânia","LXAAPT",true],["Passos Jorge","LXAAPT",true],["Piccoli Guilherme","LXAAPT",true],["Pires Diana","FAOAPT",true],["Rocha Lucas","FAOAPT",true],["Silva Johanna","LXAAPT",true],["Truta Goergia","OPTAPT",true],["Varolo Amanda","OPTAPT",true],["Vasconcelos Rui","OPTAPT",true],["Ventura Fernanda","OPTAPT",true],["Ximenes Luan","OPTAPT",true],["Rodrigues Fernanda","OPTAPT",true],["Ferrão Lucas","OPTAPT",true]];
 function construir(docs,equipa,prodNomes,avCfg,prodCats,aval,avalCfg){
   const EST=[{cod:'LXAAPT',nome:'Lisboa'},{cod:'OPTAPT',nome:'Porto'},{cod:'FAOAPT',nome:'Faro'}];
   const ei=Object.fromEntries(EST.map((e,i)=>[e.cod,i]));
@@ -1105,6 +1196,9 @@ function construir(docs,equipa,prodNomes,avCfg,prodCats,aval,avalCfg){
     const j=await r.json(); D=construir(new Map(Object.entries(j.meses)),j.equipa||null,j.extras_nomes||null,j.avaliacoes||null,j.extras_cats||null,null,null);}
   catch(e){msg('<b>Não foi possível ler os dados</b> <span class="note">('+(e.message||e)+').</span>');return;}
   if(!D.factos.length){msg('<b>Ainda sem dados.</b>');return;}
+  // Vendas · quadro mensal: data/vendas.json = {gerado, ate, docs:{AAAA-MM:{...}}, cfg:{colab:[...]}}
+  window.__vd={docs:new Map(),cfg:null};
+  try{const rv=await fetch('data/vendas.json?v='+Date.now(),{cache:'no-store'}); if(rv.ok){const jv=await rv.json(); window.__vd={docs:new Map(Object.entries(jv.docs||{})),cfg:jv.cfg||null};}}catch(e){}
   try{app(D);}catch(e){msg('<b>Erro ao desenhar o painel.</b><span class="note">'+(e.message||e)+'</span>');}
 })();
 </script>

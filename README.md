@@ -65,3 +65,11 @@ Diferenças conhecidas do Excel: RNT-23624 está duplicado no Base_Rentals; a oc
 - Piloto com novembro de 2026: nota final = 70 % chefia + 30 % autoavaliação (Microsoft Forms "Autoavaliação mensal · ICONIQ"); avaliação de novembro lançada no início de dezembro.
 - Prémio de desempenho = 15 % × vendas ao balcão da estação × % Funcionário × nota final × (1 − penalização). A % Funcionário é atribuída por cada Branch Manager, de acordo com o desempenho comercial de cada colaborador; não é calculada pela quota de vendas. Sem % atribuída não há prémio calculado.
 - Equipa: a 11/11/2026 saíram Esteves Tania, Rodrigues Marisa e Santos Renato; a 12/11/2026 entrou Ferrão Lucas (Porto; estação fixa em config/equipa.est).
+
+## Vendas · quadro mensal (17/11/2026)
+- Separador novo do dashboard e do site público, que reproduz o Excel IRPD do Nuno: mês analisado, resumo por loja, resultados por colaborador e vendas por extra.
+- Fonte: WheelSys › Extra Sales Report, List type Check-outs, todas as estações e utilizadores, Sales User "Sold by"; extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW.
+- Vendas = Net Revenue somado no mês da Check-in Date (a prevista, enquanto o contrato está aberto). Só contam os colaboradores ativos da lista, cada um na sua loja fixa; as vendas de outros utilizadores aparecem numa nota, fora dos totais.
+- Coletor: `coletores/coletor_vendas.js` (`ICQ_VENDAS`). Dados do site: `site/data/vendas.json` = {gerado, ate, docs:{AAAA-MM (mês de check-out): {u, m, k, a, c, ate, h}}, cfg:{colab:[[nome, loja, ativo]]}}.
+- No dashboard privado os dados estão na coleção `vendas` e são atualizados todos os dias às 10:20 pela tarefa agendada "Vendas quadro mensal ICONIQ – WheelSys diário". O `site/data/vendas.json` do site público só muda quando é enviado um novo commit.
+- Carga de 17/11/2026 (check-outs de 01/07 a 16/11/2026): novembro Portugal 37 266,61 € (Lisboa 13 584,26 € · Porto 17 808,57 € · Faro 5 873,78 €).
