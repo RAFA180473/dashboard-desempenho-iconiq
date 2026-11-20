@@ -1103,7 +1103,7 @@ function drawVendas(){
     for(const [code,x] of Object.entries(o.k)){const y=t.k[code]||(t.k[code]=[0,0]); y[0]+=x[0]; y[1]+=x[1];} cn.set(k,t); }
   const ei=Object.fromEntries(EST.map((e,i)=>[e.cod,i]));
   const ativos=M.lista.filter(o=>o.ativo&&ei[o.est]!=null), usados=new Set(ativos.map(o=>M.nzk(o.nome)));
-  const rows=ativos.map(o=>{const d=cn.get(M.nzk(o.nome))||{v:0,n:0,c:0,k:{}}; return {nome:o.nome,est:ei[o.est],v:d.v,n:d.n,c:d.c,k:d.k};});
+  const rows=ativos.map(o=>{const d=cn.get(M.nzk(o.nome))||{v:0,n:0,c:0,k:{}}; return {nome:o.nome,est:ei[o.est],v:d.v,n:d.n,c:d.c,k:d.k};}).filter(r=>r.c>0); // só quem tem contratos no mês analisado (Nuno, 20/11/2026)
   let fora=0; const foraN=[]; for(const [k,o] of cn) if(!usados.has(k)&&Math.abs(o.v)>0.004){fora+=o.v;foraN.push(o.nome);}
   const tot=EST.map((e,i)=>rows.filter(r=>r.est===i).reduce((s,r)=>({v:s.v+r.v,c:s.c+r.c,p:s.p+1}),{v:0,c:0,p:0}));
   const pt=tot.reduce((s,t)=>({v:s.v+t.v,c:s.c+t.c,p:s.p+t.p}),{v:0,c:0,p:0});
@@ -1120,7 +1120,7 @@ function drawVendas(){
   $('tblVqProd').querySelector('thead').innerHTML='<tr><th>Extra</th><th>Descrição</th><th>Nº</th><th>Vendas</th><th>%</th></tr>';
   $('tblVqProd').querySelector('tbody').innerHTML=Object.entries(pk).sort((a,b)=>b[1][1]-a[1][1]).map(([code,x])=>`<tr><td class="name">${esc(code)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${esc(PROD_NOMES[code]||'')}">${esc(PROD_NOMES[code]||'')}</td><td>${num(x[0])}</td><td><b>${eur2(x[1])}</b></td><td>${pct(div(x[1],tv))}</td></tr>`).join('')||'<tr><td colspan="5">Sem vendas neste mês.</td></tr>';
   $('vqProdNote').textContent=S.vqEst<0?'Portugal':EST[S.vqEst].nome;
-  $('vqNote').innerHTML=`<b>Vendas</b> = Net Revenue do Extra Sales Report do WheelSys (List type Check-outs, “Sold by”) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW, somado no mês da Check-in Date (a prevista, enquanto o contrato está aberto). Cada colaborador conta na sua loja. Check-outs de ${dmy(M.de+'-01')} a ${dmy(M.ate)}${M.at?' · atualizado em '+dmy(M.at.slice(0,10))+' às '+M.at.slice(11,16):''}.`
+  $('vqNote').innerHTML=`<b>Vendas</b> = Net Revenue do Extra Sales Report do WheelSys (List type Check-outs, “Sold by”) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW, somado no mês da Check-in Date (a prevista, enquanto o contrato está aberto). Cada colaborador conta na sua loja; só entram os colaboradores com contratos no mês analisado. Check-outs de ${dmy(M.de+'-01')} a ${dmy(M.ate)}${M.at?' · atualizado em '+dmy(M.at.slice(0,10))+' às '+M.at.slice(11,16):''}.`
     +(foraN.length?` Fora do quadro: ${eur2(fora)} vendidos por utilizadores que não estão na lista de colaboradores (${foraN.sort().map(esc).join(', ')}).`:'');
 }
 
