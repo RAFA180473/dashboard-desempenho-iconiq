@@ -223,6 +223,7 @@ table.ind tr.ed>td{white-space:normal}
 .seg button .bdg{display:inline-block;min-width:18px;margin-left:6px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
 .seg button[aria-pressed="true"] .bdg{background:var(--icq-navy-950);color:var(--bad)}
 #tblAl tbody tr,#tblAl th{cursor:default}
+#tblAlKpi td small{display:inline;margin-left:8px}
 #tblAl th:nth-child(n+5),#tblAl td:nth-child(n+5){text-align:center}
 #tblAl th:nth-child(-n+4),#tblAl td:nth-child(-n+4){text-align:left}
 #tblAl th,#tblAl td{padding-inline:8px}
@@ -461,6 +462,10 @@ table.ind tr.ed>td{white-space:normal}
         <div class="fld"><label>Estado</label><div class="seg" id="alSt" role="group" aria-label="Estado da análise"></div></div>
       </div>
       <section class="kpis" id="alKpis" aria-label="Resumo dos alertas"></section>
+      <div class="panel">
+        <div class="ph"><h2>Resumo por KPI e estação</h2><span class="note" id="alKpiNote"></span></div>
+        <div class="tbl-wrap"><table id="tblAlKpi" class="plain"><thead></thead><tbody></tbody></table></div>
+      </div>
       <div class="panel">
         <div class="ph"><h2>Classificações negativas · Customer Verdict</h2><span class="note" id="alNote"></span></div>
         <div class="tbl-wrap"><table id="tblAl" class="plain"><thead></thead><tbody></tbody></table></div>
@@ -1368,6 +1373,17 @@ function drawAl(){
     +card('Analisadas',num(nOk),base.length?pct(nOk/base.length)+' das negativas':'—')
     +card('Respostas negativas',num(base.length),resp?pct(base.length/resp)+' de '+num(resp)+' respostas':'—')
     +card('Detratores NPS',num(nDet),'recomendação 0–6');
+  { // resumo por KPI e estação: nº de respostas com nota ≤ 6 em cada KPI e % das respostas da loja (segue o mês escolhido; mostra sempre as três lojas)
+    const AM=A.filter(noMes), R=EST.map((_,e)=>{let r=0; for(const [k,v] of Object.entries(D.alResp||{})){const [m,ee]=k.split('|'); if((S.alMes==='todos'?m>=AL_DESDE:m===S.alMes)&&+ee===e)r+=v;} return r;}), RT=R.reduce((s,x)=>s+x,0);
+    const linha=(nome,f,forte)=>{const c=EST.map((_,e)=>AM.filter(a=>a.est===e&&f(a)).length), tot=c.reduce((s,x)=>s+x,0), p=c.map((x,e)=>R[e]?x/R[e]:null), mx=Math.max(...p.map(x=>x==null?-1:x));
+      const cel=(x,r,pior,sel)=>`<td class="${pior?'ko':''}"${sel?' style="background:var(--accent-soft)"':''}><b>${num(x)}</b><small>${r?pct(x/r):'—'}</small></td>`;
+      return `<tr><td class="name"${forte?' style="color:var(--accent)"':''}>${nome}</td>`+c.map((x,e)=>cel(x,R[e],x>0&&mx>0&&p[e]===mx,S.alEst===e)).join('')+cel(tot,RT,false,S.alEst<0)+'</tr>';};
+    $('tblAlKpi').querySelector('thead').innerHTML='<tr><th>KPI (nota ≤ 6)</th>'+EST.map(e=>`<th>${e.nome}</th>`).join('')+'<th>Portugal</th></tr>';
+    $('tblAlKpi').querySelector('tbody').innerHTML=AL_ITENS.map(([,l],i)=>linha(l,a=>a.n[i]!=null&&a.n[i]<=6)).join('')
+      +linha('Respostas com alguma nota ≤ 6',()=>true,true)
+      +'<tr><td class="name">Respostas recebidas</td>'+R.map(x=>`<td>${num(x)}</td>`).join('')+`<td>${num(RT)}</td></tr>`;
+    $('alKpiNote').textContent=`nº de respostas com nota ≤ 6 e % das respostas da loja · a vermelho, a loja com maior % · ${S.alMes==='todos'?'desde '+lab(AL_DESDE).toLowerCase():lab(S.alMes)}`;
+  }
   const vis=base.filter(a=>S.alSt==='all'||(S.alSt==='ok'?!!alEstado(a):!alEstado(a)))
     .sort((a,b)=>(b.dt||b.mes).localeCompare(a.dt||a.mes)||(b.ra||0)-(a.ra||0));
   const pode=window.__pode!==false&&!!window.__db;
