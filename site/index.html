@@ -1,6 +1,27 @@
 <!DOCTYPE html>
 <html lang="pt-PT">
 <head>
+<script>
+/* Site público: cópia só de leitura do dashboard privado. Lê data/db.json; não grava. */
+(function(){
+  var P=null;
+  function load(){ if(!P) P=fetch('data/db.json?v='+Date.now(),{cache:'no-store'}).then(function(r){ if(!r.ok) throw Object.assign(new Error('HTTP '+r.status),{code:'HTTP '+r.status}); return r.json(); }); return P; }
+  function snap(id,d){ return {id:id,exists:d!=null,data:function(){return d;}}; }
+  function ro(){ return Promise.reject(Object.assign(new Error('site só de leitura'),{code:'site só de leitura: altere no dashboard privado'})); }
+  var db={
+    doc:function(p){ var i=p.lastIndexOf('/'), id=p.slice(i+1);
+      return {onSnapshot:function(ok,err){ load().then(function(j){ var c=p.slice(0,i), d=(j.doc&&j.doc[p]); if(d==null&&j.col&&j.col[c]) d=j.col[c][id]; ok(snap(id,d==null?null:d)); }).catch(function(e){ if(err) err(e); }); return function(){}; },
+              get:function(){ return load().then(function(j){ var d=j.doc&&j.doc[p]; return snap(id,d==null?null:d); }); }, set:ro, update:ro, delete:ro}; },
+    collection:function(c){ return {onSnapshot:function(ok,err){ load().then(function(j){ var o=(j.col&&j.col[c])||{}; ok({docs:Object.keys(o).sort().map(function(k){return snap(k,o[k]);})}); }).catch(function(e){ if(err) err(e); }); return function(){}; }}; }
+  };
+  var user={can:function(){return Promise.resolve(false);},id:function(){return Promise.resolve(null);}};
+  window.claude={use:function(n){ return Promise.resolve(n==='db'?db:n==='user'?user:null); }};
+  load().then(function(j){ document.addEventListener('DOMContentLoaded',aviso); if(document.readyState!=='loading') aviso();
+    function aviso(){ if(document.getElementById('roAviso')) return; var f=document.querySelector('footer')||document.body, d=document.createElement('div'); d.id='roAviso'; d.className='note';
+      d.textContent='Cópia só de leitura do dashboard Desempenho ICONIQ, gerada a '+String(j.gerado||'').replace('T',' ')+'. As análises e avaliações são preenchidas no dashboard privado.'; f.appendChild(d); } }).catch(function(){});
+})();
+</script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Desempenho ICONIQ</title>
@@ -197,6 +218,21 @@ table.ind tr.ed>td{white-space:normal}
 .acts{flex-wrap:nowrap}
 .acts .btn{padding:4px 8px}
 
+/* ---- alertas: classificações negativas do Customer Verdict ---- */
+.seg button .bdg{display:inline-block;min-width:18px;margin-left:6px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.seg button[aria-pressed="true"] .bdg{background:var(--icq-navy-950);color:var(--bad)}
+#tblAl tbody tr,#tblAl th{cursor:default}
+#tblAl th:nth-child(n+5),#tblAl td:nth-child(n+5){text-align:center}
+#tblAl th:nth-child(-n+4),#tblAl td:nth-child(-n+4){text-align:left}
+#tblAl th,#tblAl td{padding-inline:8px}
+#tblAl td.ko{font-weight:700;background:var(--bad-bg)}
+#tblAl td.nt{white-space:normal;min-width:0;max-width:260px;font-family:var(--f-body);font-size:12px;color:var(--ink-2);text-align:left}
+#tblAl tr.ed>td{background:var(--pop);text-align:left;padding:14px;white-space:normal}
+#tblAl tr.sel{background:var(--accent-soft)}
+#alTxt{width:100%;min-height:70px;font:13px var(--f-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical}
+.al-ed{display:flex;flex-direction:column;gap:8px;max-width:760px}
+.al-ed .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
 @media (max-width:520px){.kpi .v{font-size:21px}.chart{height:240px}select{min-width:0}.stamp{text-align:left}.brand img{height:32px}.brand .sep{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -230,7 +266,9 @@ table.ind tr.ed>td{white-space:normal}
         <button role="tab" data-tab="vq" aria-pressed="false">Vendas · quadro mensal</button>
         <button role="tab" data-tab="vv" aria-pressed="false">Via Verde e danos</button>
         <button role="tab" data-tab="av" aria-pressed="false">Avaliações de clientes</button>
+        <button role="tab" data-tab="al" aria-pressed="false">Alertas</button>
         <button role="tab" data-tab="eq" aria-pressed="false">Análise em detalhe</button>
+        <button role="tab" data-tab="ind" aria-pressed="false">Avaliação individual</button>
       </div>
     </div>
   </div>
@@ -412,6 +450,59 @@ table.ind tr.ed>td{white-space:normal}
     </div>
   </div>
 
+  <!-- ALERTAS · CLASSIFICAÇÕES NEGATIVAS -->
+  <div class="tab-panel" id="tab-al" hidden>
+    <div id="alBox"></div>
+    <div id="alMain" class="stack">
+      <div class="xbar">
+        <div class="fld"><label for="alMes">Mês do inquérito</label><select id="alMes"></select></div>
+        <div class="fld"><label>Loja</label><div class="seg" id="alEst" role="group" aria-label="Loja"></div></div>
+        <div class="fld"><label>Estado</label><div class="seg" id="alSt" role="group" aria-label="Estado da análise"></div></div>
+      </div>
+      <section class="kpis" id="alKpis" aria-label="Resumo dos alertas"></section>
+      <div class="panel">
+        <div class="ph"><h2>Classificações negativas · Customer Verdict</h2><span class="note" id="alNote"></span></div>
+        <div class="tbl-wrap"><table id="tblAl" class="plain"><thead></thead><tbody></tbody></table></div>
+        <p class="note" id="alRegra"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- AVALIAÇÃO INDIVIDUAL -->
+  <div class="tab-panel" id="tab-ind" hidden>
+    <div class="stack">
+      <p class="note" id="indNote"></p>
+      <div id="indBanner"></div>
+      <section class="kpis" id="indKpis" aria-label="Indicadores da avaliação individual"></section>
+      <div id="indStations" class="stack"></div>
+      <input type="text" id="indOut" readonly hidden aria-label="Link ou mensagem para copiar">
+      <div class="panel">
+        <div class="ph"><h2>Autoavaliação e chefia</h2><span class="note">Nota em % do máximo, por colaborador</span></div>
+        <div class="legend" id="lgInd"></div>
+        <div class="chart tall" id="indBox"><canvas id="cInd" aria-label="Autoavaliação e avaliação da chefia por colaborador"></canvas></div>
+      </div>
+      <div class="panel" id="indCfg">
+        <div class="ph"><h2>Regras e formulário</h2><span class="note" id="indCfgSum"></span></div>
+        <div class="cfg">
+          <label class="wide">Link do formulário (com {nome}, {mes} e {estacao})<input type="url" id="cfgUrl" placeholder="https://forms.office.com/..."></label>
+          <label>Peso da autoavaliação (%)<input type="number" id="cfgPa" min="0" max="100" step="5"></label>
+          <label>Prémio s/ vendas ao balcão (%)<input type="number" id="cfgTx" min="0" max="100" step="0.5"></label>
+          <label>Comissão de Diretos (%)<input type="number" id="cfgTd" min="0" max="100" step="0.5"></label>
+          <button class="btn pri" id="cfgSave">Guardar regras</button>
+          <span class="note" id="cfgStatus" role="status"></span>
+        </div>
+        <p class="note" style="margin-top:12px"><b>Perguntas do formulário.</b> Cada critério é respondido de 1 a 5 (1 = muito abaixo do esperado, 3 = cumpre, 5 = exemplar), com um exemplo concreto do mês.</p>
+        <ol class="qlist" id="indQs"></ol>
+      </div>
+    </div>
+  </div>
+
+  <details class="panel imp" id="impPanel" hidden>
+    <summary><b>Atualizar dados do WheelSys</b> <span class="note" id="impLast"></span></summary>
+    <p class="note">Cole aqui o bloco copiado no WheelSys (botão “Copiar dados ICONIQ”). Os meses colados substituem os existentes; frota e avaliações já gravadas mantêm-se.</p>
+    <textarea id="imp" rows="3" placeholder="Colar aqui os dados ICONIQ" aria-label="Dados ICONIQ a importar"></textarea>
+    <div id="impStatus" class="note" role="status"></div>
+  </details>
 
   <footer id="foot">
     <div><b>Regras.</b> Receita, Net Rental e Rental Days no mês da Check-in Date, atribuídos à Check-out station e ao Check-out User. Contratos abertos pela Check-out Date. Fechados e danos pela Check-in Date e Check-in station. Diretos = Net Rental com Rate code DIRETOS e Corporate vazio, atribuído ao Booking User.</div>
@@ -423,8 +514,10 @@ table.ind tr.ed>td{white-space:normal}
     <div><b>Rentalcars.</b> Nota média das avaliações (escala 0–10) no mês da avaliação; Lisboa = Humberto Delgado Airport, Porto = Francisco Sá Carneiro Airport, Faro = Faro Airport. Critérios e temas vêm do ficheiro exportado (acumulado da ficha). Meta 9,0 (equivalente a 4,5 em 5).</div>
     <div><b>Nota global de avaliação.</b> Média ponderada pelo nº de avaliações, na escala 0–5, de Sunny Cars (nota tal como está), Rentalcars (nota ÷ 2) e Customer Verdict Experiência (÷ 20). Google fica de fora porque é uma nota acumulada da ficha, não do mês. Sem ligação ao colaborador: Sunny Cars e Rentalcars não trazem o nº de contrato WheelSys.</div>
     <div><b>Mês parcial.</b> Quando o último mês tem dados só até um dia (ex.: 1–15 de outubro), a comparação com o ano anterior usa o mesmo intervalo de dias desse mês, recolhido à parte do WheelSys. A frota média desse mês divide pelos dias do intervalo.</div>
-    <div><b>Vendas · quadro mensal.</b> Reproduz o Excel IRPD: Net Revenue do Extra Sales Report (List type Check-outs, “Sold by”, todos os utilizadores) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW, somado no mês da Check-in Date, para os colaboradores ativos da lista, cada um na sua loja. Atualizado todos os dias a partir do WheelSys: os check-outs do mês corrente e do mês anterior são relidos, por isso contratos prolongados, fechados mais cedo ou com estornos mudam o valor já registado. Difere das Extras Sales dos outros separadores, que usam a lista por Check-ins e a estação de check-out.</div>
     <div><b>Categorias de extras.</b> Seguros e coberturas: FCI, FDW, RDW, WUG e RAP. Upgrades e serviços: UPGR, CBORD, ADD e PPW. Por necessidade do cliente: BBS, CBS, BOO e GPS. Taxas e encargos: YDF, SDF e RAPOR. As duas primeiras são venda comercial e entram na análise por colaborador; as outras duas contam só nos totais de estação e Portugal. Numa categoria, a penetração soma as vendas dos seus produtos: um contrato com dois produtos da categoria conta duas vezes.</div>
+    <div><b>Vendas · quadro mensal.</b> Reproduz o Excel IRPD: Net Revenue do Extra Sales Report (List type Check-outs, “Sold by”, todos os utilizadores) dos extras RAP, FCI, CBORD, WUG, UPGR, FDW, ADD, PPW e RDW, somado no mês da Check-in Date, para os colaboradores ativos da lista, cada um na sua loja. Atualizado todos os dias a partir do WheelSys: os check-outs do mês corrente e do mês anterior são relidos, por isso contratos prolongados, fechados mais cedo ou com estornos mudam o valor já registado. Difere das Extras Sales dos outros separadores, que usam a lista por Check-ins e a estação de check-out.</div>
+    <div><b>Alertas.</b> Respostas do Customer Verdict com a recomendação ou qualquer das cinco notas do aluguer igual ou inferior a 6 (escala 0–10), por loja de check-out e colaborador do check-out. Cada alerta pode ser marcado como analisado, com a análise e a ação tomada; acompanhados desde outubro de 2026.</div>
+    <div><b>Avaliação individual.</b> Seis critérios do Mapa Mensal (Apresentação 10 %, Assiduidade 10 %, Disponibilidade 15 %, Procedimentos 20 %, Vertente comercial 20 %, Proatividade e autonomia 25 %), cada um de 1 a 5; nota = soma de peso × pontuação ÷ 5. Nota final = chefia e autoavaliação ponderadas pelo peso definido em “Regras e formulário”; sem avaliação da chefia não há prémio calculado. Prémio de desempenho = taxa × vendas ao balcão da estação × % do colaborador × nota final, menos penalização. A % do colaborador é atribuída por cada Branch Manager, de acordo com o desempenho comercial de cada colaborador; não é calculada pela quota de vendas, e sem % atribuída não há prémio calculado. Vendas ao balcão = Extras Sales (WUG, FCI, FDW, PPW, RDW, RAP, CBORD, ADD e UPGR, “Sold by”) dos colaboradores elegíveis da estação. Diretos = taxa × Diretos do colaborador no mês.</div>
   </footer>
 </div>
 
@@ -604,12 +697,15 @@ $('mRank').onchange=e=>{S.mRank=e.target.value;S.sort=e.target.value;S.dir=-1;dr
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;try{localStorage.setItem('iconiq-tab',S.tab)}catch(e){};showTab();});
 function showTab(){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===S.tab));
-  if(!['est','eq','ext','vq','vv','av'].includes(S.tab))S.tab='est';
-  for(const t of ['est','eq','ext','vq','vv','av'])$('tab-'+t).hidden=t!==S.tab;
-  for(const id of ['fAno','fMes','fEst','fCol'])$(id).parentElement.hidden=S.tab==='vq'; // o quadro de vendas tem o seu próprio mês e loja
-  $('ctx').hidden=S.tab==='vq'; $('kpis').hidden=S.tab==='vq'; if(S.tab==='vq')drawVendas();
+  if(!['est','eq','ext','vq','vv','av','al','ind'].includes(S.tab))S.tab='est';
+  for(const t of ['est','eq','ext','vq','vv','av','al','ind'])$('tab-'+t).hidden=t!==S.tab;
+  const proprio=S.tab==='vq'||S.tab==='al'; // o quadro de vendas e os alertas têm o seu próprio mês e loja
+  for(const id of ['fAno','fMes','fEst','fCol'])$(id).parentElement.hidden=proprio;
+  { const nb=alPend(), b=document.querySelector('#tabs [data-tab="al"]'); if(b) b.innerHTML='Alertas'+(nb?`<span class="bdg" aria-label="${nb} por analisar">${nb}</span>`:''); }
+  $('ctx').hidden=proprio; if(S.tab==='vq')drawVendas(); if(S.tab==='al')drawAl();
+  $('kpis').hidden=S.tab==='ind'||proprio;
   if(S.tab==='av'){$('mAv').value=S.mAv;drawAv();}
-  if(S.tab==='eq')drawEquipas(); if(S.tab==='est'){drawEvo();drawEst();drawEstTbl();} if(S.tab==='ext')drawExtras(); if(S.tab==='vv')drawVV();
+  if(S.tab==='eq')drawEquipas(); if(S.tab==='est'){drawEvo();drawEst();drawEstTbl();} if(S.tab==='ext')drawExtras(); if(S.tab==='vv')drawVV(); if(S.tab==='ind')drawInd();
 }
 
 /* ---------- KPI ---------- */
@@ -953,6 +1049,162 @@ function drawEstTbl(){
   $('estTblNote').textContent=`Cada estação individualmente e o total de Portugal; variação face a ${S.ano-1}. Em verde, a melhor estação nos rácios.`;
 }
 
+/* ---------- avaliação individual (autoavaliação + chefia, prémio do Mapa Mensal) ---------- */
+const CRIT=[
+  ['Apresentação',.10,'Farda, imagem pessoal e arrumação do balcão.'],
+  ['Assiduidade',.10,'Pontualidade, faltas e cumprimento da escala.'],
+  ['Disponibilidade',.15,'Trocas de turno, reforço em picos de serviço e apoio aos colegas.'],
+  ['Conhecimento e aplicação de procedimentos',.20,'Contratos sem erros, check-out e check-in completos, cauções e danos bem registados.'],
+  ['Vertente comercial',.20,'Oferta de coberturas, upgrades e serviços a todos os clientes e resultado de vendas.'],
+  ['Proatividade e autonomia',.25,'Resolve sem escalar, antecipa problemas e propõe melhorias.']];
+const ACFG=Object.assign({formUrl:'',pesoAuto:.3,taxa:.15,taxaDiretos:.05},D.avalCfg||{});
+const notaDe=a=>Array.isArray(a)&&a.length===6&&a.every(x=>x>=1&&x<=5)?a.reduce((s,x,i)=>s+CRIT[i][1]*x/5,0):null;
+const p0=v=>v==null?'—':nf0.format(v*100)+' %';
+function indModelo(){
+  const ano=S.ano, mes=S.mes>0?S.mes:(ano===ultimo[0]?ultimo[1]:12), key=ano+'-'+String(mes).padStart(2,'0');
+  const doc=(D.aval||{})[key]||{}, reg=doc.n||{}, by=new Map();
+  for(const r of D.factos){ if(r[F.ano]!==ano||r[F.mes]!==mes)continue; const c=r[F.colab]; if(SIS.has(COL[c]))continue;
+    let o=by.get(c); if(!o)by.set(c,o={c,nome:COL[c],act:new Map(),incE:new Map(),inc:0,diretos:0,abertos:0,rd:0,cv:0,danos:0});
+    const e=r[F.est]; o.act.set(e,(o.act.get(e)||0)+r[F.rental_days]+r[F.abertos]); o.incE.set(e,(o.incE.get(e)||0)+r[F.inc]);
+    o.inc+=r[F.inc]; o.diretos+=r[F.diretos]; o.abertos+=r[F.abertos]; o.rd+=r[F.rental_days]; o.cv+=r[F.c_venda_col]; o.danos+=r[F.danos]; }
+  const top=m=>{let b=-1,bv=0; for(const [e,v] of m) if(v>bv){bv=v;b=e;} return b;};
+  // estação fixa (config/equipa.est = {"Apelido Nome":"OPTAPT"}): o colaborador aparece nessa estação, mesmo sem atividade no mês
+  const fx=window.__eqEst||{}, ecod=Object.fromEntries(EST.map((e,i)=>[e.cod,i])), eqN=new Set(D.equipa||[]);
+  for(const n of Object.keys(fx)){ if(ecod[fx[n]]==null||!eqN.has(n))continue; const c=COL.indexOf(n);
+    if(![...by.values()].some(o=>o.nome===n)) by.set('fx:'+n,{c,nome:n,fixo:true,act:new Map(),incE:new Map(),inc:0,diretos:0,abertos:0,rd:0,cv:0,danos:0}); }
+  const rows=[];
+  for(const o of by.values()){
+    const g=reg[o.nome]||{}; const fe=ecod[fx[o.nome]]; let e=fe!=null?fe:top(o.act); if(e<0)e=top(o.incE); if(e<0&&!g.c&&!g.a)continue; if(e<0)e=0;
+    o.est=e; o.g=g; o.el=g.el!==false; o.vendas=o.incE.get(e)||0;
+    o.auto=notaDe(g.a); o.chefia=notaDe(g.c);
+    o.final=o.chefia==null?null:o.auto==null?o.chefia:(1-ACFG.pesoAuto)*o.chefia+ACFG.pesoAuto*o.auto;
+    o.desvio=o.auto!=null&&o.chefia!=null?o.auto-o.chefia:null;
+    const q=o.c<0?{nps:null,nps_n:0}:soma({ano,meses:[mes],est:-1,col:o.c}); o.nps=q.nps; o.nps_n=q.nps_n; o.pen=div(o.cv,o.abertos); o.irpd=div(o.inc,o.rd);
+    rows.push(o);
+  }
+  const est=EST.map((e,i)=>{ const L=rows.filter(o=>o.est===i).sort((a,b)=>b.vendas-a.vendas), el=L.filter(o=>o.el);
+    const basE=el.reduce((s,o)=>s+o.vendas,0), pool=basE*ACFG.taxa;
+    for(const o of L){ o.pctAuto=o.el&&basE?o.vendas/basE:0; o.pct=o.el?(o.g.pct!=null?o.g.pct/100:null):0;
+      o.bruto=o.final==null||!o.el||o.pct==null?null:pool*o.pct*o.final; o.penal=(+o.g.pen||0)/100;
+      o.premio=o.bruto==null?null:o.bruto*(1-o.penal); o.comDir=o.el?o.diretos*ACFG.taxaDiretos:0; o.total=o.premio==null?null:o.premio+o.comDir; }
+    const ref=soma({ano,meses:[mes],est:i,col:-1,ind:true});
+    return {i,nome:e.nome,L,base:basE,pool,pctSum:el.reduce((s,o)=>s+(o.pct||0),0),pctFalta:el.filter(o=>o.pct==null).length,ref}; });
+  return {ano,mes,key,doc,rows,est};
+}
+async function gravaAval(key,nome,patch){
+  const db=window.__db; if(!db)throw new Error('sem ligação');
+  const cur=JSON.parse(JSON.stringify((D.aval||{})[key]||{})); cur.n=cur.n||{};
+  cur.n[nome]=Object.assign({},cur.n[nome],patch); cur.at=new Date().toISOString().slice(0,16);
+  await db.doc('avaliacoes/'+key).set(cur);
+}
+function linkForm(o,key){ if(!ACFG.formUrl)return null; const enc=encodeURIComponent; if(ACFG.mesMin&&key<ACFG.mesMin)key=ACFG.mesMin;
+  return ACFG.formUrl.replace(/\{nome\}/g,enc(o.nome)).replace(/\{mes\}/g,enc(key)).replace(/\{estacao\}/g,enc(EST[o.est].nome)); }
+function copiar(txt,btn,ok){
+  const fim=t=>{const a=btn.textContent;btn.textContent=t;setTimeout(()=>btn.textContent=a,1600);};
+  const mostra=()=>{const el=$('indOut');el.hidden=false;el.value=txt;el.focus();el.select();fim('Copie abaixo');};
+  try{navigator.clipboard.writeText(txt).then(()=>fim(ok),mostra);}catch(e){mostra();}
+}
+function drawInd(){
+  const Mo=indModelo(), stC=[css('--st-1'),css('--st-2'),css('--st-3')], pode=window.__pode!==false;
+  const mesTxt=`${MESES[Mo.mes-1]} ${Mo.ano}`, parc=P&&Mo.ano===P.y&&Mo.mes===P.m;
+  const vis=Mo.est.filter(e=>S.est<0||e.i===S.est), rows=vis.flatMap(e=>e.L).filter(o=>S.col<0||o.c===S.col);
+  $('indNote').textContent=`Avaliação mensal de ${mesTxt}${S.mes===0?' (a avaliação é mensal: com o período em acumulado mostra-se o último mês)':''}${parc?` · mês ainda parcial (1–${P.dia}), os valores de prémio são provisórios`:''}. Cada colaborador aparece na estação onde teve mais atividade no mês. No site público esta vista é só de consulta; as avaliações são lançadas no dashboard privado.`;
+  $('indBanner').innerHTML=ACFG.formUrl?'':`<div class="banner"><b>Formulário ainda não ligado.</b> Os botões “Link” e “Mensagem” (copiam o link do formulário, ou uma mensagem pronta a enviar ao colaborador) ficam ativos quando o link do Microsoft Forms for guardado em “Regras e formulário”. Até lá, a autoavaliação pode ser registada à mão em “Avaliar”.</div>`;
+  const el=rows.filter(o=>o.el), nA=el.filter(o=>o.auto!=null).length, nC=el.filter(o=>o.chefia!=null).length;
+  const fin=el.filter(o=>o.final!=null), med=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
+  const dv=el.filter(o=>o.desvio!=null).map(o=>o.desvio), mdv=med(dv);
+  const card=(l,v,d,hl)=>`<div class="kpi${hl?' hl':''}"><span class="l">${l}</span><span class="v">${v}</span><span class="d">${d}</span></div>`;
+  $('indKpis').innerHTML=
+    card('Autoavaliações recebidas',`${nA}<small>/ ${el.length}</small>`,`<span>${el.length-nA} por responder</span>`,true)
+   +card('Avaliações da chefia',`${nC}<small>/ ${el.length}</small>`,`<span>${el.length-nC} por fazer</span>`)
+   +card('% do funcionário atribuída',`${el.filter(o=>o.pct!=null).length}<small>/ ${el.length}</small>`,`<span>atribuída pelo Branch Manager · ${el.filter(o=>o.pct==null).length} por atribuir</span>`)
+   +card('Nota final média',p0(med(fin.map(o=>o.final))),`<span>${fin.length} colaboradores com nota final</span>`)
+   +card('Desvio auto − chefia',mdv==null?'—':(mdv>0?'+':'')+nf0.format(mdv*100)+' p.p.',mdv==null?'<span class="note">precisa das duas avaliações</span>':`<span>${dv.filter(x=>x>0.1).length} com autoavaliação mais de 10 p.p. acima</span>`)
+   +card('Prémio de desempenho',eur(fin.reduce((s,o)=>s+(o.premio||0),0)),`<span>de ${eur(vis.reduce((s,e)=>s+e.pool,0))} disponíveis (${nf1.format(ACFG.taxa*100)} % das vendas ao balcão)</span>`)
+   +card('Comissão de Diretos',eur(el.reduce((s,o)=>s+o.comDir,0)),`<span>${nf1.format(ACFG.taxaDiretos*100)} % dos Diretos</span>`);
+
+  const estado=(v,quando,txt)=>v!=null?`<b>${p0(v)}</b>`:`<span class="pill ${quando}">${txt}</span>`;
+  $('indStations').innerHTML=vis.map(e=>{
+    const L=e.L.filter(o=>S.col<0||o.c===S.col); if(!L.length)return '';
+    const aviso=e.pctFalta?` · <b style="color:var(--warn)">% do funcionário por atribuir: ${e.pctFalta}</b>`:Math.abs(e.pctSum-1)>0.005&&e.L.some(o=>o.g.pct!=null)?` · <b style="color:var(--warn)">% dos colaboradores soma ${nf1.format(e.pctSum*100)} %</b>`:'';
+    return `<div class="panel"><div class="st-head"><h2><i style="background:${stC[e.i]}"></i>${e.nome}</h2>
+      <div class="nums"><span>Vendas ao balcão <b>${eur(e.base)}</b></span><span>Prémio disponível <b>${eur(e.pool)}</b></span><span>Atribuído <b>${eur(e.L.reduce((s,o)=>s+(o.premio||0),0))}</b></span><span>Penetração comercial da estação <b>${pct(e.ref.pen)}</b>${aviso}</span></div></div>
+      <div class="tbl-wrap"><table class="ind"><thead><tr><th>Colaborador</th><th>Vendas balcão</th><th>% func.</th><th>Auto</th><th>Chefia</th><th>Desvio</th><th>Nota final</th><th>Prémio</th><th>Diretos</th><th>Total</th><th></th></tr></thead><tbody>`
+      +L.map(o=>{
+        const ed=S.indEd===o.nome, lk=linkForm(o,Mo.key);
+        const dsv=o.desvio==null?'—':`<span class="delta ${Math.abs(o.desvio)<=0.1?'flat':o.desvio>0?'down':'up'}">${o.desvio>0?'+':''}${nf0.format(o.desvio*100)} p.p.</span>`;
+        let h=`<tr class="${ed?'sel':''}"><td class="name">${o.nome}<small>${o.el?`${num(o.abertos)} contratos · penetração ${pct(o.pen)}`:'fora do prémio'}</small></td>
+          <td>${eur(o.vendas)}</td><td>${!o.el?'—':o.pct==null?'<span class="pill wait">por atribuir</span>':'<b>'+nf1.format(o.pct*100)+' %</b>'}</td>
+          <td>${estado(o.auto,'wait','em falta')}${o.auto!=null&&o.g.aSrc?`<small class="note"> ${o.g.aSrc}</small>`:''}</td>
+          <td>${estado(o.chefia,'no','em falta')}</td><td>${dsv}</td>
+          <td>${o.final==null?'<span class="pill no">aguarda</span>':`<b style="color:var(--accent)">${p0(o.final)}</b>`}</td>
+          <td>${o.premio==null?'—':eur2(o.premio)}${o.penal?` <span class="delta down">−${nf0.format(o.penal*100)} %</span>`:''}</td>
+          <td>${eur2(o.comDir)}</td><td><b>${o.total==null?'—':eur2(o.total)}</b></td>
+          <td><div class="acts"><button class="btn" data-a="link" data-n="${o.nome}" ${lk?'':'disabled title="Guarde primeiro o link do formulário"'}>Link</button><button class="btn" data-a="msg" data-n="${o.nome}" ${lk?'':'disabled'}>Mensagem</button>${pode?`<button class="btn pri" data-a="ed" data-n="${o.nome}">${ed?'Fechar':'Avaliar'}</button>`:''}</div></td></tr>`;
+        if(ed){ const sel=(p,a)=>CRIT.map((c,i)=>`<select data-${p}="${i}" aria-label="${c[0]} · ${p==='a'?'autoavaliação':'chefia'}">${['<option value="0">—</option>'].concat([1,2,3,4,5].map(n=>`<option value="${n}"${a&&a[i]===n?' selected':''}>${n}</option>`)).join('')}</select>`);
+          const sa=sel('a',o.g.a), sc2=sel('c',o.g.c), dz=o.g.a&&o.g.c?CRIT.map((_,i)=>o.g.a[i]-o.g.c[i]):null;
+          h+=`<tr class="ed"><td colspan="11"><div class="edgrid"><div class="crit">
+            <span class="hd">Critério</span><span class="hd">Auto</span><span class="hd">Chefia</span>
+            ${CRIT.map((c,i)=>`<div class="cl"><b>${c[0]} · ${nf0.format(c[1]*100)} %${dz&&Math.abs(dz[i])>=2?` <span class="delta ${dz[i]>0?'down':'up'}">${dz[i]>0?'+':''}${dz[i]} pts</span>`:''}</b><span>${c[2]}</span></div>${sa[i]}${sc2[i]}`).join('')}</div>
+            <div class="edside"><div class="facts">
+              <div>Penetração comercial<b>${pct(o.pen)}</b>estação ${pct(e.ref.pen)}</div>
+              <div>iRPD<b>${eur2(o.irpd)}</b>estação ${eur2(e.ref.irpd)}</div>
+              <div>NPS<b>${o.nps_n>=5?IND.nps.f(o.nps):'—'}</b>${num(o.nps_n)} respostas</div>
+              <div>Danos cobrados<b>${eur(o.danos)}</b>check-ins do mês</div></div>
+              <p class="note">Estes números são factos do mês para apoiar a nota da Vertente comercial e de Procedimentos; a nota continua a ser dada por critério. A % do funcionário é atribuída pelo Branch Manager da estação, de acordo com o desempenho comercial; para referência, a quota deste colaborador nas vendas ao balcão da estação foi ${nf1.format(o.pctAuto*100)} %.</p>
+              <div class="row"><label>% do funcionário (Branch Manager)<input type="number" id="edPct" min="0" max="100" step="0.1" value="${o.g.pct!=null?o.g.pct:''}" placeholder="por atribuir"></label>
+                <label>Penalização (%)<input type="number" id="edPen" min="0" max="100" step="5" value="${o.g.pen||0}"></label>
+                <label class="ck"><input type="checkbox" id="edEl" ${o.el?'checked':''}> Entra no prémio da estação</label></div>
+              <label>Observações<input type="text" id="edObs" value="${String(o.g.obs||'').replace(/"/g,'&quot;')}" maxlength="300"></label>
+              <div class="row"><button class="btn pri" data-a="save" data-n="${o.nome}">Guardar avaliação</button><span class="note" id="edStatus" role="status"></span></div>
+            </div></div></td></tr>`; }
+        return h;}).join('')+'</tbody></table></div></div>';}).join('')
+    || '<div class="empty"><h3>Sem colaboradores neste período</h3><p>Não há atividade da equipa registada no mês e estação escolhidos.</p></div>';
+
+  const porNome=Object.fromEntries(Mo.rows.map(o=>[o.nome,o]));
+  $('indStations').querySelectorAll('button[data-a]').forEach(b=>b.onclick=async()=>{
+    const o=porNome[b.dataset.n], a=b.dataset.a;
+    if(a==='ed'){S.indEd=S.indEd===o.nome?null:o.nome;drawInd();return;}
+    if(a==='link'){copiar(linkForm(o,Mo.key),b,'Link copiado');return;}
+    if(a==='msg'){const pn=o.nome.split(' ').slice(1).join(' ')||o.nome;
+      copiar(`Olá ${pn}, segue o link para a tua autoavaliação de ${mesTxt}. São seis perguntas e demora cerca de 3 minutos: ${linkForm(o,Mo.key)}`,b,'Mensagem copiada');return;}
+    if(a==='save'){ const tr=b.closest('tr'), rd=p=>CRIT.map((_,i)=>+tr.querySelector(`select[data-${p}="${i}"]`).value);
+      const na=rd('a'), nc=rd('c'), st=$('edStatus'), parcial=x=>x.some(v=>v>0)&&x.some(v=>v===0);
+      if(parcial(na)||parcial(nc)){st.textContent='Preencha os seis critérios de cada avaliação, ou deixe-a toda em branco.';return;}
+      const patch={pen:Math.min(100,Math.max(0,+$('edPen').value||0)),el:$('edEl').checked,obs:$('edObs').value.trim()};
+      const pv=$('edPct').value.trim(); patch.pct=pv===''?null:Math.min(100,Math.max(0,+pv));
+      const hoje=new Date().toISOString().slice(0,10), mud=(x,y)=>JSON.stringify(x)!==JSON.stringify(y||null);
+      if(na.every(v=>v>0)){ if(mud(na,o.g.a)){patch.a=na;patch.aAt=hoje;patch.aSrc='registo manual';} } else if(o.g.a){patch.a=null;patch.aAt=null;patch.aSrc=null;}
+      if(nc.every(v=>v>0)){ if(mud(nc,o.g.c)){patch.c=nc;patch.cAt=hoje;} } else if(o.g.c){patch.c=null;patch.cAt=null;}
+      st.textContent='A guardar…';
+      try{await gravaAval(Mo.key,o.nome,patch);st.textContent='Guardado.';}catch(e){st.textContent='Não foi possível guardar ('+(e.code||e.message)+').';}
+    }});
+
+  // gráfico: autoavaliação e chefia
+  const G=rows.filter(o=>o.el&&(o.auto!=null||o.chefia!=null)).sort((a,b)=>(b.final??b.auto??0)-(a.final??a.auto??0));
+  const cA=css('--icq-sky'), cC=css('--accent');
+  $('lgInd').innerHTML=G.length?`<span><i class="sw bar" style="background:${cA}"></i>Autoavaliação</span><span><i class="sw bar" style="background:${cC}"></i>Chefia</span>`:'<span class="note">Ainda sem avaliações neste mês.</span>';
+  $('indBox').style.height=G.length?Math.max(140,G.length*34+50)+'px':'0px';
+  if(G.length){ const o=baseOpts(p0); o.indexAxis='y'; o.interaction={mode:'index',axis:'y',intersect:false};
+    o.scales={x:{...o.scales.y,position:'top',max:1,ticks:{...o.scales.y.ticks,callback:v=>nf0.format(v*100)+'%'}},y:{grid:{display:false},border:{color:css('--axis')},ticks:{color:css('--ink-2'),font:{family:"'IBM Plex Sans',system-ui,'Segoe UI',sans-serif",size:12},autoSkip:false}}};
+    mk('cInd',{type:'bar',data:{labels:G.map(x=>x.nome),datasets:[
+      {label:'Autoavaliação',data:G.map(x=>x.auto),backgroundColor:cA,borderRadius:4,borderSkipped:'start',barThickness:10},
+      {label:'Chefia',data:G.map(x=>x.chefia),backgroundColor:cC,borderRadius:4,borderSkipped:'start',barThickness:10}]},options:o}); }
+  else { const ex=Chart.getChart($('cInd')); if(ex)ex.destroy(); }
+
+  // regras e formulário
+  $('indCfgSum').textContent=`Autoavaliação ${nf0.format(ACFG.pesoAuto*100)} % · chefia ${nf0.format((1-ACFG.pesoAuto)*100)} % · prémio ${nf1.format(ACFG.taxa*100)} % · Diretos ${nf1.format(ACFG.taxaDiretos*100)} %${ACFG.formUrl?'':' · formulário por ligar'}`;
+  if(document.activeElement?.closest?.('#indCfg')==null){ $('cfgUrl').value=ACFG.formUrl; $('cfgPa').value=Math.round(ACFG.pesoAuto*100); $('cfgTx').value=+(ACFG.taxa*100).toFixed(2); $('cfgTd').value=+(ACFG.taxaDiretos*100).toFixed(2); }
+  $('cfgSave').hidden=!pode;
+  $('cfgSave').onclick=async()=>{ const st=$('cfgStatus'), u=$('cfgUrl').value.trim(), lim=(id,d)=>{const v=+$(id).value;return isFinite(v)?Math.min(100,Math.max(0,v))/100:d;};
+    if(u&&!/^https:\/\//i.test(u)){st.textContent='O link tem de começar por https://';return;}
+    st.textContent='A guardar…';
+    try{await window.__db.doc('config/avaliacao').set({...(D.avalCfg||{}),formUrl:u,pesoAuto:lim('cfgPa',.3),taxa:lim('cfgTx',.15),taxaDiretos:lim('cfgTd',.05)});st.textContent='Guardado.';}
+    catch(e){st.textContent='Não foi possível guardar ('+(e.code||e.message)+').';} };
+  $('indQs').innerHTML=CRIT.map(c=>`<li><b>${c[0]} (${nf0.format(c[1]*100)} %).</b> ${c[2]} De 1 a 5, como avalias o teu mês neste ponto? Dá um exemplo concreto.</li>`).join('')
+    +'<li><b>Pergunta aberta.</b> O que precisas da chefia ou da empresa para melhorar no próximo mês?</li>';
+}
+
 /* ---------- Via Verde e danos ---------- */
 function drawVV(){
   const meses=mesesDoPeriodo(S.ano,S.mes);
@@ -1084,6 +1336,79 @@ function vqModelo(){
   const meses=Object.keys(by).sort(); if(!meses.length)return null;
   return {by,lista,nzk,ate,at,meses,de:[...docs.keys()].sort()[0]};
 }
+/* ---------- Alertas: classificações negativas do Customer Verdict ----------
+   Negativa = recomendação ou qualquer das 5 notas ≤ 6 (Nuno, 26/11/2026). Estado da análise no db: alertas/<mês>-<nº contrato>. */
+const AL_DESDE='2026-10'; // os alertas são acompanhados a partir de outubro de 2026; os meses anteriores ficam como histórico
+const AL_ITENS=[['Recom.','Recomendação'],['Reserva','Reserva'],['Levant.','Levantamento'],['Viatura','Estado da viatura'],['Limpeza','Limpeza'],['Devol.','Devolução']];
+function alEstado(a){const s=window.__al&&window.__al.docs.get(a.id); return s&&s.estado==='analisado'?s:null;}
+function alPend(){return (D.alertas||[]).filter(a=>a.mes>=AL_DESDE&&!alEstado(a)).length;}
+function drawAl(){
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const A=D.alertas||[];
+  if(!A.length){$('alMain').hidden=true;$('alBox').innerHTML='<div class="empty"><h3>Sem classificações negativas</h3><div>As respostas do Customer Verdict chegam com a atualização diária. Aparece aqui cada resposta com uma nota igual ou inferior a 6.</div></div>';return;}
+  $('alBox').innerHTML='';$('alMain').hidden=false;
+  const lab=k=>MESES[+k.slice(5)-1]+' '+k.slice(0,4), dmy=d=>d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4);
+  const meses=[...new Set(A.map(a=>a.mes))].sort().reverse();
+  if(S.alMes==null||(S.alMes!=='todos'&&!meses.includes(S.alMes)))S.alMes='todos';
+  if(S.alEst==null)S.alEst=-1; if(!S.alSt)S.alSt='pend';
+  opts($('alMes'),[['todos','Desde '+lab(AL_DESDE).toLowerCase()]].concat(meses.map(k=>[k,lab(k)+(k<AL_DESDE?' · histórico':'')])),S.alMes);
+  $('alMes').onchange=e=>{S.alMes=e.target.value;S.alEdit=null;drawAl();};
+  $('alEst').innerHTML=[[-1,'Portugal']].concat(EST.map((e,i)=>[i,e.nome])).map(([v,t])=>`<button data-e="${v}" aria-pressed="${v===S.alEst}">${t}</button>`).join('');
+  $('alEst').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.alEst=+b.dataset.e;S.alEdit=null;drawAl();});
+  $('alSt').innerHTML=[['pend','Por analisar'],['ok','Analisados'],['all','Todos']].map(([v,t])=>`<button data-s="${v}" aria-pressed="${v===S.alSt}">${t}</button>`).join('');
+  $('alSt').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.alSt=b.dataset.s;S.alEdit=null;drawAl();});
+  const noMes=a=>S.alMes==='todos'?a.mes>=AL_DESDE:a.mes===S.alMes, naLoja=a=>S.alEst<0||a.est===S.alEst;
+  const base=A.filter(a=>noMes(a)&&naLoja(a));
+  const nOk=base.filter(alEstado).length, nPend=base.filter(a=>a.mes>=AL_DESDE&&!alEstado(a)).length, nDet=base.filter(a=>a.n[0]!=null&&a.n[0]<=6).length;
+  let resp=0; for(const [k,v] of Object.entries(D.alResp||{})){const [m,e]=k.split('|'); if((S.alMes==='todos'?m>=AL_DESDE:m===S.alMes)&&(S.alEst<0||+e===S.alEst))resp+=v;}
+  const card=(l,v,d,hl)=>`<div class="kpi${hl?' hl':''}"><span class="l">${l}</span><span class="v">${v}</span><span class="d"><span>${d}</span></span></div>`;
+  $('alKpis').innerHTML=card('Por analisar',num(nPend),nPend?'classificações sem análise registada':(S.alMes!=='todos'&&S.alMes<AL_DESDE?'mês anterior ao início dos alertas':'tudo analisado'),true)
+    +card('Analisadas',num(nOk),base.length?pct(nOk/base.length)+' das negativas':'—')
+    +card('Respostas negativas',num(base.length),resp?pct(base.length/resp)+' de '+num(resp)+' respostas':'—')
+    +card('Detratores NPS',num(nDet),'recomendação 0–6');
+  const vis=base.filter(a=>S.alSt==='all'||(S.alSt==='ok'?!!alEstado(a):!alEstado(a)))
+    .sort((a,b)=>(b.dt||b.mes).localeCompare(a.dt||a.mes)||(b.ra||0)-(a.ra||0));
+  const pode=window.__pode!==false&&!!window.__db;
+  const tag=i=>`<span class="est-tag"><i style="background:var(--st-${i+1})"></i>${EST[i].nome}</span>`;
+  const nota=v=>`<td class="${v!=null&&v<=6?'ko':''}">${v==null?'—':num(v)}</td>`;
+  $('tblAl').querySelector('thead').innerHTML='<tr><th>Data</th><th>Loja</th><th>Contrato</th><th>Colaborador (check-out)</th>'
+    +AL_ITENS.map(([t,l])=>`<th title="${l}">${t}</th>`).join('')+'<th>Estado</th><th>Análise</th><th></th></tr>';
+  const linhas=[];
+  for(const a of vis){
+    const s=alEstado(a), aberto=S.alEdit===a.id, ant=window.__al&&window.__al.docs.get(a.id);
+    linhas.push(`<tr${aberto?' class="sel"':''}><td>${a.dt?dmy(a.dt):lab(a.mes)}</td><td>${tag(a.est)}</td><td>${a.ra!=null?'RNT-'+a.ra:'—'}</td><td class="name">${a.col?esc(a.col):'<span class="note">não identificado</span>'}</td>`
+      +a.n.map(nota).join('')
+      +`<td>${s?'<span class="pill ok">Analisado</span>':a.mes<AL_DESDE?'<span class="pill no">Histórico</span>':'<span class="pill wait">Por analisar</span>'}</td>`
+      +`<td class="nt">${ant&&ant.nota?esc(ant.nota):''}</td>`
+      +`<td>${pode?`<button class="btn${s?'':' pri'}" data-al="${esc(a.id)}">${aberto?'Fechar':s?'Ver':'Analisar'}</button>`:''}</td></tr>`);
+    if(aberto){
+      const quando=ant&&ant.at?` · ${ant.estado==='analisado'?'analisado':'atualizado'} em ${dmy(ant.at.slice(0,10))} às ${ant.at.slice(11,16)}`:'';
+      linhas.push(`<tr class="ed"><td colspan="13"><div class="al-ed">
+        <label class="note" for="alTxt">Análise e ação tomada${quando}</label>
+        <textarea id="alTxt" placeholder="O que aconteceu, o que foi feito (contacto com o cliente, conversa com o colaborador, correção do processo)…"></textarea>
+        <div class="row"><button class="btn pri" id="alOk">${s?'Guardar alterações':'Marcar como analisado'}</button>${s?'<button class="btn" id="alReab">Reabrir</button>':''}<button class="btn" id="alCanc">Cancelar</button><span class="note" id="alMsg" role="status"></span></div>
+      </div></td></tr>`);
+    }
+  }
+  $('tblAl').querySelector('tbody').innerHTML=linhas.join('')||`<tr><td colspan="13" style="text-align:left">${S.alSt==='pend'?'Nada por analisar nesta seleção.':'Sem classificações negativas nesta seleção.'}</td></tr>`;
+  $('tblAl').querySelectorAll('button[data-al]').forEach(b=>b.onclick=()=>{const id=b.dataset.al; if(S.alEdit===id){S.alEdit=null;}else{S.alEdit=id;const x=window.__al&&window.__al.docs.get(id);S.alDraft=x&&x.nota||'';} drawAl();});
+  const a=vis.find(x=>x.id===S.alEdit);
+  if(a&&$('alTxt')){
+    const t=$('alTxt'); t.value=S.alDraft||''; t.oninput=()=>{S.alDraft=t.value;};
+    const grava=async estado=>{const m=$('alMsg'); m.textContent='A gravar…';
+      try{ let por=null; try{const u=await window.claude.use('user'); por=u&&u.id?await u.id():null;}catch(e){}
+        const d=new Date(), p=x=>String(x).padStart(2,'0'), at=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+        await window.__db.doc('alertas/'+a.id).set({estado,nota:t.value.trim(),at,por,mes:a.mes,ra:a.ra,est:EST[a.est].cod});
+        S.alEdit=null;S.alDraft='';
+      }catch(e){m.textContent='Não foi possível gravar ('+(e.code||e.message)+').';}};
+    $('alOk').onclick=()=>grava('analisado');
+    if($('alReab'))$('alReab').onclick=()=>grava('pendente');
+    $('alCanc').onclick=()=>{S.alEdit=null;S.alDraft='';drawAl();};
+  }
+  $('alNote').textContent=`${vis.length} de ${base.length} · ${S.alEst<0?'Portugal':EST[S.alEst].nome} · ${S.alMes==='todos'?'desde '+lab(AL_DESDE).toLowerCase():lab(S.alMes)}`;
+  $('alRegra').innerHTML='<b>Classificação negativa</b> = resposta do Customer Verdict com a recomendação ou qualquer das cinco notas do aluguer (reserva, levantamento, estado da viatura, limpeza, devolução) igual ou inferior a 6, em escala de 0 a 10. Notas ≤ 6 a vermelho. Data = dia em que o cliente respondeu ao inquérito (mês, nas respostas recolhidas antes da atualização diária). Colaborador = quem fez o check-out do contrato (RA Number), quando o contrato já está fechado no WheelSys. Atualizado todos os dias com a recolha do Customer Verdict; o número no separador conta as classificações por analisar desde '+lab(AL_DESDE).toLowerCase()+'.';
+}
+
 function drawVendas(){
   const M=vqModelo();
   if(!M){$('vqMain').hidden=true;$('vqBox').innerHTML='<div class="empty"><h3>Ainda sem dados de vendas</h3><div>Os dados chegam com a atualização diária do WheelSys (Extra Sales Report, Check-outs, “Sold by”).</div></div>';return;}
@@ -1150,7 +1475,7 @@ function construir(docs,equipa,prodNomes,avCfg,prodCats,aval,avalCfg){
   const ei=Object.fromEntries(EST.map((e,i)=>[e.cod,i]));
   const cset=new Set();
   for(const d of docs.values()){ for(const s of [d,d.hom||{}]){ (s.f||[]).forEach(r=>cset.add(r[1])); (s.p||[]).forEach(r=>cset.add(r[1])); } (d.ativ||[]).forEach(r=>cset.add(r[1])); }
-  const factos=[],prod=[],frota=[],ocs=[],ver=[],ativ=[],av=[],raMap=new Map(); let ate='',contratos=0,gerado='',temExtras=false,parcial=null; const extMeses=new Set();
+  const factos=[],prod=[],frota=[],ocs=[],ver=[],ativ=[],av=[],raMap=new Map(),alertas=[],alResp={}; let ate='',contratos=0,gerado='',temExtras=false,parcial=null; const extMeses=new Set();
   for(const d of docs.values()) if(d.ra&&d.ra.r) for(const [n,u] of d.ra.r) raMap.set(n,d.ra.u[u]);
   for(const c of raMap.values()) cset.add(c);
   const COL=[...cset].sort((a,b)=>a.localeCompare(b,'pt')); const ci=Object.fromEntries(COL.map((c,i)=>[c,i]));
@@ -1171,6 +1496,10 @@ function construir(docs,equipa,prodNomes,avCfg,prodCats,aval,avalCfg){
     carrega(d,y,m,dmE,OUT,true);
     for(const r of d.ativ||[]){ if(ei[r[0]]==null)continue; ativ.push([y,m,ei[r[0]],ci[r[1]],+r[2]||0]); }
     for(const r of d.verR||[]){ if(ei[r[1]]==null)continue; const u=raMap.get(r[0]); ver.push([y,m,ei[r[1]],u==null?-1:ci[u],...r.slice(2,8)]); }
+    // alertas: respostas com alguma nota ≤ 6 (r[8] = data do inquérito, quando a recolha a traz)
+    (d.verR||[]).forEach((r,i)=>{ if(ei[r[1]]==null)return; const rk=k+'|'+ei[r[1]]; alResp[rk]=(alResp[rk]||0)+1;
+      const n=r.slice(2,8).map(x=>x==null?null:+x); if(!n.some(x=>x!=null&&x<=6))return;
+      alertas.push({id:k+'-'+(r[0]!=null?r[0]:'i'+i),mes:k,ra:r[0],est:ei[r[1]],n,dt:typeof r[8]==='string'&&/^\d{4}-\d{2}-\d{2}/.test(r[8])?r[8].slice(0,10):null,col:r[0]!=null?raMap.get(r[0])||null:null}); });
     for(const r of d.ocs||[]){ if(ei[r[0]]==null)continue; ocs.push([y,m,ei[r[0]],+r[1]||0,+r[2]||0,+r[3]||0,+r[4]||0]); }
     // av = [estação, fonte SC|RC, nº avaliações, nota, viatura, espera, atendimento, reclamações]
     for(const r of d.av||[]){ if(ei[r[0]]==null||!(+r[2]>0))continue; av.push([y,m,ei[r[0]],r[1],+r[2],+r[3],+r[4]||0,+r[5]||0,+r[6]||0,+r[7]||0]); }
@@ -1184,22 +1513,79 @@ function construir(docs,equipa,prodNomes,avCfg,prodCats,aval,avalCfg){
     meses:['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
     colaboradores:COL,sistema:(()=>{const nz=x=>String(x).replace(/\s+/g,' ').trim().toLowerCase(); const E=new Set((equipa||EQUIPA_DEF).map(nz)); return COL.filter(c=>/^account system$/i.test(c)||c==='(sem colaborador)'||!E.has(nz(c)));})(),
     campos:['ano','mes','est','colab','turnover','net_rental','rental_days','abertos','fechados','danos','diretos','inc','c_venda','r_extras','dias_abertos','vv','vv_ctr','c_venda_col','r_extras_col'],
-    factos,prod,frota,ocs,ver,ativ,av,temExtras,extMeses,prodNomes:prodNomes||null,prodCats:prodCats||null,aval:aval||{},avalCfg:avalCfg||null,parcial,hom,avCfg:avCfg||null};
+    factos,prod,frota,ocs,ver,ativ,av,alertas,alResp,temExtras,extMeses,prodNomes:prodNomes||null,prodCats:prodCats||null,equipa:equipa||EQUIPA_DEF,aval:aval||{},avalCfg:avalCfg||null,parcial,hom,avCfg:avCfg||null};
 }
 
 (async function(){
   const $=id=>document.getElementById(id);
   const msg=html=>{$('kpis').innerHTML=`<div class="kpi" style="grid-column:1/-1;padding:22px">${html}</div>`;};
+  const st=(t,c)=>{const el=$('impStatus');el.textContent=t;el.dataset.state=c||'';};
   msg('<span class="note">A carregar dados…</span>');
-  let D;
-  try{const r=await fetch('data/meses.json?v='+Date.now(),{cache:'no-store'}); if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json(); D=construir(new Map(Object.entries(j.meses)),j.equipa||null,j.extras_nomes||null,j.avaliacoes||null,j.extras_cats||null,null,null);}
-  catch(e){msg('<b>Não foi possível ler os dados</b> <span class="note">('+(e.message||e)+').</span>');return;}
-  if(!D.factos.length){msg('<b>Ainda sem dados.</b>');return;}
-  // Vendas · quadro mensal: data/vendas.json = {gerado, ate, docs:{AAAA-MM:{...}}, cfg:{colab:[...]}}
-  window.__vd={docs:new Map(),cfg:null};
-  try{const rv=await fetch('data/vendas.json?v='+Date.now(),{cache:'no-store'}); if(rv.ok){const jv=await rv.json(); window.__vd={docs:new Map(Object.entries(jv.docs||{})),cfg:jv.cfg||null};}}catch(e){}
-  try{app(D);}catch(e){msg('<b>Erro ao desenhar o painel.</b><span class="note">'+(e.message||e)+'</span>');}
+  const db=window.claude?await window.claude.use('db'):null;
+  if(!db){msg('<b>Sem ligação aos dados do painel.</b><span class="note">Abra a página no Claude com a sessão iniciada.</span>');return;}
+  const user=await window.claude.use('user');
+  const pode=user?await user.can('data.write'):null;
+  if(pode!==false) $('impPanel').hidden=false;
+  window.__db=db; window.__pode=pode;
+
+  let docs=new Map(), ok=false, equipa=null, temDocs=false, prodNomes=null, avCfg=null, prodCats=null, aval={}, avalCfg=null;
+  db.collection('avaliacoes').onSnapshot(snap=>{aval=Object.fromEntries(snap.docs.filter(d=>d.exists).map(d=>[d.id,d.data()])); if(temDocs) render();},()=>{});
+  db.doc('config/avaliacao').onSnapshot(x=>{avalCfg=x.exists?x.data():null; if(temDocs) render();},()=>{});
+  db.doc('config/avaliacoes').onSnapshot(x=>{avCfg=x.exists?x.data():null; if(temDocs) render();},()=>{});
+  db.doc('config/extras').onSnapshot(x=>{const d=x.exists?x.data():null; prodNomes=d&&d.nomes&&typeof d.nomes==='object'?d.nomes:null; prodCats=d&&d.cats&&typeof d.cats==='object'?d.cats:null; if(temDocs) render();},()=>{});
+  db.doc('config/equipa').onSnapshot(x=>{const d=x.exists?x.data():null; equipa=d&&Array.isArray(d.nomes)?d.nomes:null; window.__eqEst=d&&d.est&&typeof d.est==='object'?d.est:null; if(temDocs) render();},()=>{});
+  window.__vd=window.__vd||{docs:new Map(),cfg:null}; // Vendas · quadro mensal
+  db.collection('vendas').onSnapshot(snap=>{window.__vd.docs=new Map(snap.docs.filter(d=>d.exists).map(d=>[d.id,d.data()])); if(temDocs) render();},()=>{});
+  db.doc('config/vendas').onSnapshot(x=>{window.__vd.cfg=x.exists?x.data():null; if(temDocs) render();},()=>{});
+  window.__al=window.__al||{docs:new Map()}; // Alertas: estado da análise das classificações negativas
+  db.collection('alertas').onSnapshot(snap=>{window.__al.docs=new Map(snap.docs.filter(d=>d.exists).map(d=>[d.id,d.data()])); if(temDocs) render();},()=>{});
+  db.collection('meses').onSnapshot(snap=>{
+    docs=new Map(snap.docs.filter(d=>d.exists).map(d=>[d.id,d.data()])); temDocs=true; render();
+  },e=>msg('<b>Não foi possível ler os dados</b> <span class="note">('+e.code+').</span>'));
+  function render(){
+    const D=construir(docs,equipa,prodNomes,avCfg,prodCats,aval,avalCfg);
+    if(!D.factos.length){msg('<b>Ainda sem dados.</b><span class="note">Os dados chegam com a recolha semanal do WheelSys (sexta, 17:45) ou colando o resultado do coletor em “Atualizar dados do WheelSys”, no fim da página.</span>');return;}
+    try{app(D);ok=true;}catch(e){msg('<b>Erro ao desenhar o painel.</b><span class="note">'+(e.message||e)+'</span>');}
+  }
+  db.doc('estado/recolha').onSnapshot(s=>{const d=s.exists?s.data():null;
+    $('impLast').textContent=d?`Última recolha: ${String(d.at).replace('T',' ')} · ${d.meses.length} meses · ${d.origem}`:'Ainda sem recolhas.';},()=>{});
+
+  let t=null;
+  $('imp').addEventListener('input',()=>{clearTimeout(t);t=setTimeout(importar,400);});
+  async function importar(){
+    const txt=$('imp').value.trim(); if(!txt)return;
+    let j; try{j=JSON.parse(txt);}catch(e){st('O texto colado não é um bloco de dados ICONIQ. Volte a copiar no WheelSys e cole de novo.','bad');return;}
+    if(j&&j.origem==='autoavaliacao'&&Array.isArray(j.respostas)){ // respostas do formulário: [{mes:'AAAA-MM',nome,notas:[6 valores 1–5],em}]
+      const nz=x=>String(x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+      const eq=new Map((equipa||EQUIPA_DEF).map(n=>[nz(n),n])), por={}, fora=[];
+      for(const r of j.respostas){ const n=eq.get(nz(r.nome)), a=(r.notas||[]).map(Number);
+        if(!n||!/^\d{4}-\d{2}$/.test(r.mes||'')||a.length!==6||!a.every(v=>v>=1&&v<=5)){fora.push(r.nome||'?');continue;}
+        (por[r.mes]=por[r.mes]||{})[n]={a,aAt:String(r.em||new Date().toISOString()).slice(0,10),aSrc:'formulário'}; }
+      try{ for(const [k,ns] of Object.entries(por)){ const cur=JSON.parse(JSON.stringify(aval[k]||{})); cur.n=cur.n||{};
+          for(const [n,p] of Object.entries(ns)) cur.n[n]=Object.assign({},cur.n[n],p); cur.at=new Date().toISOString().slice(0,16); await db.doc('avaliacoes/'+k).set(cur); }
+        st(`Autoavaliações gravadas: ${Object.values(por).reduce((s,x)=>s+Object.keys(x).length,0)}.`+(fora.length?` Ignoradas (nome fora da equipa ou notas incompletas): ${fora.join(', ')}.`:''),'ok'); $('imp').value='';
+      }catch(e){st('A gravação falhou ('+(e.code||e.message)+').','bad');}
+      return; }
+    if(!j||typeof j.meses!=='object'){st('Formato inesperado: falta a secção "meses".','bad');return;}
+    const ks=Object.keys(j.meses).filter(k=>/^\d{4}-\d{2}$/.test(k)).sort();
+    if(!ks.length){st('O bloco colado não tem meses.','bad');return;}
+    st(`A gravar ${ks.length} meses…`);
+    try{
+      for(const k of ks){
+        const novo=j.meses[k], body={...(docs.get(k)||{})};
+        const campos=body.fechado&&!j.reabrir?['verR','fl','ocs','ativ','av']:['f','p','cv','fl','ocs','verR','ra','ativ','ctrl','ate','av','hom'];
+        for(const c of campos) if(novo[c]!=null) body[c]=novo[c];
+        if(j.fechar&&j.fechar.includes(k)) body.fechado=true;
+        if(Array.isArray(novo.linhas)&&(!(docs.get(k)||{}).fechado||j.reabrir)){
+          for(let i=0;i*800<novo.linhas.length;i++) await db.doc(`linhas/${k}-${i}`).set({mes:k,parte:i,r:novo.linhas.slice(i*800,(i+1)*800)});
+          body.linhas_n=novo.linhas.length; }
+        body.origem=j.origem||'importação'; body.at=j.gerado||new Date().toISOString().slice(0,16);
+        await db.doc('meses/'+k).set(body);
+      }
+      await db.doc('estado/recolha').set({at:j.gerado||new Date().toISOString().slice(0,16),meses:ks,origem:j.origem||'importação'});
+      st(`Gravado: ${ks.length} meses, de ${ks[0]} a ${ks[ks.length-1]}.`,'ok'); $('imp').value='';
+    }catch(e){st('A gravação falhou ('+(e.code||e.message)+'). Cole de novo dentro de instantes.','bad');}
+  }
 })();
 </script>
 
